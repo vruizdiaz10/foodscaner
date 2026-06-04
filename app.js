@@ -259,12 +259,22 @@ async function toggleCamera() {
         cameraSelectWrapper.classList.remove("hidden");
       }
 
+      // Detect rear camera by label keywords
+      const rearKeywords = ["back", "rear", "environment", "trasera", "posterior", "trás"];
+      const rearCam = devices.find(d =>
+        rearKeywords.some(kw => d.label.toLowerCase().includes(kw))
+      );
+      const defaultCam = rearCam || devices[0];
+
+      // Pre-select rear camera in dropdown
+      cameraSelect.value = defaultCam.id;
+
       // Initialize scanner object
       html5QrCode = new Html5Qrcode("interactive-scanner");
       isScanning = true;
 
-      // Start scanning using the first device in list
-      startScanning(devices[0].id);
+      // Start scanning using rear camera by default
+      startScanning(defaultCam.id);
     } else {
       alert("No se encontraron cámaras en este dispositivo.");
       resetCameraButton();
