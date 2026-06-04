@@ -232,7 +232,15 @@
             </div>
           </div>
 
-          <div class="analysis-grid">
+          <div id="no-nutrition-alert" class="fallback-nutrition-alert hidden">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 28px; height: 28px; flex-shrink: 0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div>
+              <strong>Información nutrimental no disponible</strong>
+              <p style="margin: 4px 0 0; font-size: 0.85rem; opacity: 0.8;">Este producto fue encontrado en una base de datos externa que no proporciona detalles nutricionales. Los campos de gluten, calorías, alérgenos y Nutri-Score no están disponibles para este código.</p>
+            </div>
+          </div>
+
+          <div class="analysis-grid" id="analysis-grid">
             <!-- TARJETA GLUTEN -->
             <div class="analysis-card" id="card-gluten">
               <div class="card-icon-wrapper">

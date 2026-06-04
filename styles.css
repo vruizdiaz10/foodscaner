@@ -761,6 +761,18 @@ body {
   margin-left: 6px;
 }
 
+.fallback-nutrition-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--border-radius-md);
+  color: #fcd34d;
+}
+
 #product-name {
   font-family: var(--font-display);
   font-size: 1.5rem;

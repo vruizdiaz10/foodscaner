@@ -94,6 +94,8 @@ const cardCalories = document.getElementById("card-calories");
 const allergensList = document.getElementById("allergens-list");
 const allergensSafeMsg = document.getElementById("allergens-safe-msg");
 const nutriscoreVal = document.getElementById("nutriscore-val");
+const noNutritionAlert = document.getElementById("no-nutrition-alert");
+const analysisGrid = document.getElementById("analysis-grid");
 
 // Result Elements (Rejected)
 const rejectedTitle = document.getElementById("rejected-title");
@@ -620,9 +622,18 @@ function renderProductData(product, barcode) {
     productImg.src = "";
   }
 
+  if (product.isFromFallback) {
+    analysisGrid.classList.add("hidden");
+    noNutritionAlert.classList.remove("hidden");
+    return;
+  }
+
+  analysisGrid.classList.remove("hidden");
+  noNutritionAlert.classList.add("hidden");
+
   // Render Gluten Card details
   glutenStatus.textContent = product.gluten.details;
-  cardGluten.className = "analysis-card"; // Reset
+  cardGluten.className = "analysis-card";
   if (product.gluten.hasGluten) {
     glutenStatus.className = "status-value gluten-contains";
     cardGluten.style.borderColor = "var(--accent-alert)";
@@ -636,8 +647,7 @@ function renderProductData(product, barcode) {
   caloriesProgress.style.width = `${product.calories.percent}%`;
   caloriesLevel.textContent = `Nivel de energía: ${product.calories.level}`;
   
-  // Color code calorie progress bar
-  cardCalories.className = "analysis-card"; // Reset
+  cardCalories.className = "analysis-card";
   if (product.calories.level === "Alto") {
     caloriesLevel.className = "level-indicator calories-high";
     caloriesProgress.style.background = "var(--accent-error)";
@@ -670,7 +680,6 @@ function renderProductData(product, barcode) {
   const score = (product.nutriscore || "").toLowerCase();
   nutriscoreVal.textContent = score ? score.toUpperCase() : "N/D";
   
-  // Reset active classes
   document.querySelectorAll(".ns-score").forEach(el => {
     el.classList.remove("active");
   });
