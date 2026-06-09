@@ -556,6 +556,52 @@ function parseApiProduct(product) {
     });
   }
 
+  // Fallback: detectar alérgenos en el texto de ingredientes cuando faltan tags estructurados
+  if (allergensList.length === 0 && ingredientsText) {
+    const allergenKeywords = [
+      { kw: "cacahuate", label: "Cacahuates (Maní)" },
+      { kw: "cacahuete", label: "Cacahuates (Maní)" },
+      { kw: "peanut", label: "Cacahuates (Maní)" },
+      { kw: "soya", label: "Soja" },
+      { kw: "soja", label: "Soja" },
+      { kw: "soy", label: "Soja" },
+      { kw: "leche", label: "Leche (Lácteos)" },
+      { kw: "milk", label: "Leche (Lácteos)" },
+      { kw: "lactosa", label: "Leche (Lácteos)" },
+      { kw: "lactose", label: "Leche (Lácteos)" },
+      { kw: "huevo", label: "Huevos" },
+      { kw: "egg", label: "Huevos" },
+      { kw: "nueces", label: "Frutos de cáscara (Nueces)" },
+      { kw: "nuez", label: "Frutos de cáscara (Nueces)" },
+      { kw: "almendra", label: "Frutos de cáscara (Nueces)" },
+      { kw: "almond", label: "Frutos de cáscara (Nueces)" },
+      { kw: "trigo", label: "Trigo (Gluten)" },
+      { kw: "wheat", label: "Trigo (Gluten)" },
+      { kw: "gluten", label: "Trigo (Gluten)" },
+      { kw: "pescado", label: "Pescado" },
+      { kw: "fish", label: "Pescado" },
+      { kw: "mostaza", label: "Mostaza" },
+      { kw: "mustard", label: "Mostaza" },
+      { kw: "sésamo", label: "Sésamo" },
+      { kw: "sesame", label: "Sésamo" },
+      { kw: "sulfito", label: "Sulfitos" },
+      { kw: "crustáceo", label: "Crustáceos" },
+      { kw: "crustacean", label: "Crustáceos" },
+      { kw: "molusco", label: "Moluscos" },
+      { kw: "mollusc", label: "Moluscos" },
+      { kw: "altramuz", label: "Altramuces" },
+      { kw: "lupin", label: "Altramuces" },
+      { kw: "apio", label: "Apio" },
+      { kw: "celery", label: "Apio" }
+    ];
+    allergenKeywords.forEach(({ kw, label }) => {
+      const regex = new RegExp("\\b" + kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      if (regex.test(ingredientsText) && !allergensList.includes(label)) {
+        allergensList.push(label);
+      }
+    });
+  }
+
   // Nutriscore
   const nutriscore = product.nutriscore_grade || product.nutrition_grades || "-";
 
