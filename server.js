@@ -52,7 +52,41 @@ app.get('/api/product/:barcode', async (req, res, next) => {
     return res.json({ status: 1, source: 'local', product: db[barcode] });
   }
 
-  // 2. Buscar en USDA FoodData Central
+  // 2. Buscar en Open Food Facts (mundial)
+  async function queryOFF(host, label) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8000);
+    try {
+      console.log(`[${label}] Buscando en ${host}: ${barcode}`);
+      const url = `https://${host}/api/v2/product/${barcode}.json`;
+      const response = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(t);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 1 && data.product) {
+          console.log(`[${label}] Encontrado en ${host}: ${barcode}`);
+          return data;
+        }
+      }
+    } catch (error) {
+      clearTimeout(t);
+      if (error.name === 'AbortError') {
+        console.warn(`[${label}] Timeout (8s) consultando ${host}`);
+      } else {
+        console.warn(`[${label}] Error consultando ${host}:`, error.message);
+      }
+    }
+    return null;
+  }
+
+  const worldResult = await queryOFF("world.openfoodfacts.org", "OFF World");
+  if (worldResult) return res.json(worldResult);
+
+  // 3. Buscar en Open Food Facts (MX)
+  const mxResult = await queryOFF("mx.openfoodfacts.org", "OFF MX");
+  if (mxResult) return res.json(mxResult);
+
+  // 4. Buscar en USDA FoodData Central
   async function queryUSDA(barcode) {
     const USDA_API_KEY = "wT50TCqGVpmeEfLhVbFZNpTBU4SVgiqNOlEp1iBK";
     const ctrl = new AbortController();
@@ -129,40 +163,6 @@ app.get('/api/product/:barcode', async (req, res, next) => {
 
   const usdaResult = await queryUSDA(barcode);
   if (usdaResult) return res.json(usdaResult);
-
-  // 3. Buscar en Open Food Facts (mundial + MX)
-  async function queryOFF(host, label) {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 8000);
-    try {
-      console.log(`[${label}] Buscando en ${host}: ${barcode}`);
-      const url = `https://${host}/api/v2/product/${barcode}.json`;
-      const response = await fetch(url, { signal: ctrl.signal });
-      clearTimeout(t);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.status === 1 && data.product) {
-          console.log(`[${label}] Encontrado en ${host}: ${barcode}`);
-          return data;
-        }
-      }
-    } catch (error) {
-      clearTimeout(t);
-      if (error.name === 'AbortError') {
-        console.warn(`[${label}] Timeout (8s) consultando ${host}`);
-      } else {
-        console.warn(`[${label}] Error consultando ${host}:`, error.message);
-      }
-    }
-    return null;
-  }
-
-  const worldResult = await queryOFF("world.openfoodfacts.org", "OFF World");
-  if (worldResult) return res.json(worldResult);
-
-  // 4. Fallback a servidor regional de México (MX)
-  const mxResult = await queryOFF("mx.openfoodfacts.org", "OFF MX");
-  if (mxResult) return res.json(mxResult);
 
   // 5. Fallback a UpcItemDb (Base de datos global con 20 millones de productos comerciales)
   let upcTimeout;
