@@ -1,5 +1,5 @@
 /* ==========================================================================
-   FoodScaner Core JavaScript Logic
+   Yomi Core JavaScript Logic
    ========================================================================== */
 
 // Demo & Mock database for guaranteed success during evaluation and offline fallback
@@ -748,8 +748,8 @@ function renderRejected(product) {
   showState(resultRejected);
   rejectedTitle.textContent = product.isSimulated ? "Producto Simulado (No Alimento)" : "Producto Rechazado";
   rejectedMessage.textContent = product.isSimulated
-    ? "Simulación offline: Este producto no es un alimento. FoodScaner solo analiza alimentos para consumo humano."
-    : "Este producto no es un alimento. FoodScaner solo analiza alimentos o bebidas de consumo humano.";
+    ? "Simulación offline: Este producto no es un alimento. Yomi solo analiza alimentos para consumo humano."
+    : "Este producto no es un alimento. Yomi solo analiza alimentos o bebidas de consumo humano.";
   rejectedProductName.textContent = product.name || "Producto no identificado";
   rejectedProductCategory.textContent = product.category || "No alimenticio / Higiene / Otros";
 }

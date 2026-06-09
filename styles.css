@@ -1,5 +1,5 @@
 /* ==========================================================================
-   FoodScaner Premium CSS Style Guide (Glassmorphism & Neon Accents)
+   Yomi Premium CSS Style Guide (Glassmorphism & Neon Accents)
    ========================================================================== */
 
 :root {
@@ -166,8 +166,13 @@ body {
   letter-spacing: -0.5px;
 }
 
-.logo-area h1 span {
+.logo-area h1 .yo {
   color: var(--accent-primary);
+  position: relative;
+}
+
+.logo-area h1 .mi {
+  color: #f8fafc;
   position: relative;
 }
 

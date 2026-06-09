@@ -339,7 +339,7 @@ app.post('/api/product', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`==================================================`);
-  console.log(`  FoodScaner corriendo con éxito!`);
+  console.log(`  Yomi corriendo con éxito!`);
   console.log(`  Accede a la app en: http://localhost:${PORT}`);
   console.log(`==================================================`);
 });
