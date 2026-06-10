@@ -740,7 +740,13 @@ function renderProductData(product, barcode) {
   if (product.isFromFallback) {
     analysisGrid.classList.add("hidden");
     noNutritionAlert.classList.remove("hidden");
-    showAiSection(product);
+    const aiSect = document.getElementById("ai-query-section");
+    const aiBt = document.getElementById("btn-ai-query");
+    if (aiSect && aiBt) {
+      aiSect.classList.remove("hidden");
+      aiSect.style.display = "block";
+      aiBt.onclick = () => queryAI(product.name, product.brand);
+    }
     return;
   }
 
@@ -808,11 +814,14 @@ function showAiSection(product) {
   const aiSection = document.getElementById("ai-query-section");
   const aiBtn = document.getElementById("btn-ai-query");
   if (!aiSection || !aiBtn) return;
-  if (!product.allergensDataAvailable || (product.gluten && product.gluten.dataAvailable === false)) {
+  const missingData = !product.allergensDataAvailable || (product.gluten && product.gluten.dataAvailable === false);
+  if (missingData) {
     aiSection.classList.remove("hidden");
+    aiSection.style.display = "block";
     aiBtn.onclick = () => queryAI(product.name, product.brand);
   } else {
     aiSection.classList.add("hidden");
+    aiSection.style.display = "";
   }
 }
 
