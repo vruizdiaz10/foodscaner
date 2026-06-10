@@ -880,6 +880,15 @@ body {
 .gluten-contains {
   color: #f59e0b; /* Amber */
 }
+.gluten-unknown {
+  color: #94a3b8; /* Slate-400 */
+}
+
+/* Unknown Allergens */
+.allergen-unknown {
+  color: #94a3b8;
+  opacity: 0.8;
+}
 
 /* Calories Indicator */
 .calories-low {

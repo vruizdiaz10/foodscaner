@@ -499,18 +499,21 @@ function parseApiProduct(product) {
   const labelsTags = (product.labels_tags || []).map(t => t.toLowerCase());
   const isLabeledGlutenFree = labelsTags.some(tag => tag.includes("gluten-free") || tag.includes("sin-gluten") || tag.includes("libre-de-gluten"));
 
-  let hasGluten = false;
-  let glutenDetails = "Libre de gluten";
+  const glutenDataAvailable = !!(product.ingredients_text || (product.traces && product.traces !== "undefined") || (product.allergens_tags && product.allergens_tags.length > 0));
 
-  if ((matchesGlutenInIngredients || hasGlutenAllergenTag) && !isLabeledGlutenFree) {
-    hasGluten = true;
-    // Find what ingredient triggered it
-    const detectedInIngredients = glutenKeywords.filter(k => ingredientsText.includes(k));
-    glutenDetails = detectedInIngredients.length > 0 
-      ? `Contiene gluten (${detectedInIngredients.join(", ")})` 
-      : "Contiene gluten detectado";
-  } else if (isLabeledGlutenFree) {
-    glutenDetails = "Sin Gluten (Certificado)";
+  let hasGluten = false;
+  let glutenDetails = glutenDataAvailable ? "Libre de gluten" : "Sin información de gluten";
+
+  if (glutenDataAvailable) {
+    if ((matchesGlutenInIngredients || hasGlutenAllergenTag) && !isLabeledGlutenFree) {
+      hasGluten = true;
+      const detectedInIngredients = glutenKeywords.filter(k => ingredientsText.includes(k));
+      glutenDetails = detectedInIngredients.length > 0 
+        ? `Contiene gluten (${detectedInIngredients.join(", ")})` 
+        : "Contiene gluten detectado";
+    } else if (isLabeledGlutenFree) {
+      glutenDetails = "Sin Gluten (Certificado)";
+    }
   }
 
   // Calories parser
@@ -625,6 +628,8 @@ function parseApiProduct(product) {
   // Nutriscore
   const nutriscore = product.nutriscore_grade || product.nutrition_grades || "-";
 
+  const allergensDataAvailable = allergensList.length > 0 || !!(product.allergens_tags?.length || product.allergens_from_ingredients || ingredientsText);
+
   return {
     name,
     brand,
@@ -633,7 +638,8 @@ function parseApiProduct(product) {
     category: categoryLabel,
     gluten: {
       hasGluten,
-      details: glutenDetails
+      details: glutenDetails,
+      dataAvailable: glutenDataAvailable
     },
     calories: {
       value: Math.round(kcal),
@@ -641,6 +647,7 @@ function parseApiProduct(product) {
       percent: percent
     },
     allergens: allergensList,
+    allergensDataAvailable,
     nutriscore: nutriscore
   };
 }
@@ -653,6 +660,10 @@ function renderProductData(product, barcode) {
   }
 
   showState(resultSuccess);
+
+  // Default data availability when not set by parser
+  if (product.gluten && product.gluten.dataAvailable === undefined) product.gluten.dataAvailable = true;
+  if (product.allergensDataAvailable === undefined) product.allergensDataAvailable = true;
 
   // Set header details
   productName.textContent = product.name;
@@ -708,6 +719,9 @@ function renderProductData(product, barcode) {
   if (product.gluten.hasGluten) {
     glutenStatus.className = "status-value gluten-contains";
     cardGluten.style.borderColor = "var(--accent-alert)";
+  } else if (product.gluten.dataAvailable === false) {
+    glutenStatus.className = "status-value gluten-unknown";
+    cardGluten.style.borderColor = "var(--text-muted)";
   } else {
     glutenStatus.className = "status-value gluten-safe";
     cardGluten.style.borderColor = "var(--accent-primary)";
@@ -743,8 +757,14 @@ function renderProductData(product, barcode) {
       `;
       allergensList.appendChild(tag);
     });
+  } else if (product.allergensDataAvailable === false) {
+    allergensSafeMsg.classList.remove("hidden");
+    allergensSafeMsg.textContent = "Sin información de alérgenos (no hay datos en la base)";
+    allergensSafeMsg.className = "safe-msg allergen-unknown";
   } else {
     allergensSafeMsg.classList.remove("hidden");
+    allergensSafeMsg.textContent = "✓ Libre de alérgenos comunes declarados.";
+    allergensSafeMsg.className = "safe-msg";
   }
 
   // Render Nutri-Score indicator (temporalmente deshabilitado)
