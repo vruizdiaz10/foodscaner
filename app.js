@@ -112,11 +112,11 @@ function showDebugPanel(sourceLabel, rawData) {
   if (!debugPanel || !debugSource || !debugRaw) return;
   debugSource.textContent = sourceLabel || "N/A";
   debugRaw.textContent = rawData ? JSON.stringify(rawData, null, 2) : "N/A";
-  debugPanel.classList.remove("hidden");
+  debugPanel.style.display = "block";
 }
 
 function hideDebugPanel() {
-  if (debugPanel) debugPanel.classList.add("hidden");
+  if (debugPanel) debugPanel.style.display = "none";
 }
 const btnSimulateNotFound = document.getElementById("btn-simulate-not-found");
 const btnShowRegisterForm = document.getElementById("btn-show-register-form");
