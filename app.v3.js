@@ -687,9 +687,9 @@ function runAICheck(product) {
 
   showDBDisclaimer(product);
 
-  const isFallback = product.isFromFallback;
-  const isMissingData = !product.allergensDataAvailable || (product.gluten && product.gluten.dataAvailable === false);
-  if (isFallback || isMissingData) {
+  const showFullAI = product.isFromFallback;
+
+  if (showFullAI) {
     aiSection.classList.remove("hidden");
     aiSection.style.display = "block";
   } else {
@@ -719,7 +719,7 @@ function runAICheck(product) {
   .then(data => {
     loading.classList.add("hidden");
     if (data.error) {
-      if (isFallback || isMissingData) {
+      if (showFullAI) {
         error.textContent = "Error: " + (data.details || data.error);
         error.classList.remove("hidden");
       }
@@ -728,7 +728,7 @@ function runAICheck(product) {
 
     renderAIResult(data);
 
-    if (isFallback || isMissingData) {
+    if (showFullAI) {
       result.classList.remove("hidden");
     } else {
       compareWithDB(data, product);
@@ -736,7 +736,7 @@ function runAICheck(product) {
   })
   .catch(err => {
     loading.classList.add("hidden");
-    if (isFallback || isMissingData) {
+    if (showFullAI) {
       error.textContent = "Error de conexión: " + err.message;
       error.classList.remove("hidden");
     }
@@ -776,9 +776,9 @@ function compareWithDB(aiData, product) {
     if (dbVal !== aiVal) {
       discGluten.classList.remove("hidden");
       if (dbVal) {
-        discGluten.innerHTML = "<strong>Gluten:</strong> La base de datos indica que <strong>contiene gluten</strong>, pero la IA sugiere que <strong>no contiene gluten</strong>.";
+        discGluten.innerHTML = "<strong>Gluten:</strong> La base de datos indica que contiene gluten, pero la IA sugiere que podría no contenerlo.";
       } else {
-        discGluten.innerHTML = "<strong>Gluten:</strong> La base de datos indica que <strong>no contiene gluten</strong>, pero la IA sugiere que <strong>contiene gluten</strong>.";
+        discGluten.innerHTML = "<strong>Gluten:</strong> La base de datos indica que no contiene gluten, pero la IA sugiere que podría contenerlo.";
       }
       hasDiscrepancy = true;
     }
@@ -789,13 +789,13 @@ function compareWithDB(aiData, product) {
     const aiAll = (aiData.allergens || []).map(a => a.toLowerCase().trim());
     const dbSet = new Set(dbAll);
     const aiSet = new Set(aiAll);
-    const dbOnly = dbAll.filter(a => !aiSet.has(a));
     const aiOnly = aiAll.filter(a => !dbSet.has(a));
-    if (dbOnly.length > 0 || aiOnly.length > 0) {
+    const dbOnly = dbAll.filter(a => !aiSet.has(a));
+    const parts = [];
+    if (aiOnly.length > 0) parts.push("La IA detectó posibles alérgenos adicionales no registrados en la base de datos: <strong>" + aiOnly.join(", ") + "</strong>");
+    if (dbOnly.length > 0) parts.push("Alérgenos registrados en la base de datos no confirmados por la IA: <strong>" + dbOnly.join(", ") + "</strong>");
+    if (parts.length > 0) {
       discAllergens.classList.remove("hidden");
-      const parts = [];
-      if (dbOnly.length > 0) parts.push("En la base de datos pero no detectado por IA: <strong>" + dbOnly.join(", ") + "</strong>");
-      if (aiOnly.length > 0) parts.push("Detectado por IA pero no en la base de datos: <strong>" + aiOnly.join(", ") + "</strong>");
       discAllergens.innerHTML = "<strong>Alérgenos:</strong> " + parts.join(". ");
       hasDiscrepancy = true;
     }
