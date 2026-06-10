@@ -1,72 +1,6 @@
 /* ==========================================================================
    Yomi Core JavaScript Logic
-   v3 - fix: AI section display with explicit inline style
    ========================================================================== */
-
-// Demo & Mock database for guaranteed success during evaluation and offline fallback
-const DEMO_PRODUCTS = {
-  "7613034626844": {
-    name: "Galletas Chokella de Chocolate",
-    brand: "Nestlé",
-    image: "https://images.openfoodfacts.org/images/products/761/303/462/6844/front_es.36.400.jpg",
-    isFood: true,
-    category: "Galletas y pasteles",
-    gluten: {
-      hasGluten: true,
-      details: "Contiene gluten (trigo)"
-    },
-    calories: {
-      value: 446,
-      level: "Alto", /* Alto: >400, Medio: 150-400, Bajo: <150 */
-      percent: 85 /* Progress bar */
-    },
-    allergens: ["Trigo (Gluten)", "Leche", "Soja"],
-    nutriscore: "d"
-  },
-  "8410046001254": {
-    name: "Caldo de Pollo 100% Natural",
-    brand: "Gallina Blanca",
-    image: "https://images.openfoodfacts.org/images/products/841/004/600/1254/front_es.103.400.jpg",
-    isFood: true,
-    category: "Caldos deshidratados y preparados",
-    gluten: {
-      hasGluten: false,
-      details: "Sin Gluten (Certificado)"
-    },
-    calories: {
-      value: 7,
-      level: "Bajo",
-      percent: 2
-    },
-    allergens: [],
-    nutriscore: "b"
-  },
-  "5449000000996": {
-    name: "Coca-Cola Sabor Original",
-    brand: "Coca-Cola",
-    image: "https://images.openfoodfacts.org/images/products/544/900/000/0996/front_es.520.400.jpg",
-    isFood: true,
-    category: "Bebidas endulzadas",
-    gluten: {
-      hasGluten: false,
-      details: "Libre de gluten"
-    },
-    calories: {
-      value: 42,
-      level: "Bajo",
-      percent: 8
-    },
-    allergens: [],
-    nutriscore: "e"
-  },
-  "8411300000100": {
-    name: "Champú Flex Clásico Cuidado Diario",
-    brand: "Revlon",
-    image: "", // Dejar vacío para disparar el fallback svg
-    isFood: false,
-    category: "Higiene y Cosméticos (Champús)"
-  }
-};
 
 // DOM Elements
 const btnToggleCamera = document.getElementById("btn-toggle-camera");
@@ -104,46 +38,9 @@ const rejectedProductName = document.getElementById("rejected-product-name");
 const rejectedProductCategory = document.getElementById("rejected-product-category");
 const notFoundActions = document.getElementById("not-found-actions");
 
-// Debug
-const debugSource = document.getElementById("debug-source");
-const debugRaw = document.getElementById("debug-raw");
-const debugPanel = document.getElementById("debug-panel");
-const debugToggle = document.getElementById("debug-toggle");
-const debugBody = document.getElementById("debug-body");
 const dataSourceInfo = document.getElementById("data-source-info");
 
-function showDebugPanel(sourceLabel, rawData) {
-  if (!debugPanel || !debugSource || !debugRaw) return;
-  debugSource.textContent = sourceLabel || "N/A";
-  debugRaw.textContent = rawData ? JSON.stringify(rawData, null, 2) : "N/A";
-  renderSourceResults(rawData?.sourceResults);
-  console.log("[DEBUG] Panel actualizado - fuente:", sourceLabel);
-}
 
-function renderSourceResults(results) {
-  const tbody = document.getElementById("source-results-body");
-  if (!tbody) return;
-  tbody.innerHTML = "";
-  if (!results || results.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-muted);text-align:center;padding:8px;">Sin datos de fuentes</td></tr>';
-    return;
-  }
-  results.forEach(r => {
-    const tr = document.createElement("tr");
-    const foundClass = r.found ? "status-yes" : "status-no";
-    const foundText = r.found ? (r.productName || "Encontrado") : "—";
-    const allergenClass = r.allergenInfo && r.allergenInfo !== "—" && r.allergenInfo !== "Sin datos" ? "status-yes" : "status-no";
-    const nutritionClass = r.nutritionInfo && r.nutritionInfo !== "—" && r.nutritionInfo !== "Sin datos" ? "status-yes" : "status-no";
-    tr.innerHTML = `
-      <td>${r.source}</td>
-      <td class="${foundClass}" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${foundText}">${foundText}</td>
-      <td class="${foundClass}" style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.brandName || "—"}">${r.brandName || "—"}</td>
-      <td class="${allergenClass}">${r.allergenInfo || "—"}</td>
-      <td class="${nutritionClass}">${r.nutritionInfo || "—"}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
 
 const btnSimulateNotFound = document.getElementById("btn-simulate-not-found");
 const btnShowRegisterForm = document.getElementById("btn-show-register-form");
@@ -158,14 +55,7 @@ let html5QrCode = null;
 let isScanning = false;
 
 // Initialize Application
-document.addEventListener("DOMContentLoaded", () => {
-  if (debugToggle && debugBody) {
-    debugToggle.addEventListener("click", () => {
-      debugBody.classList.toggle("hidden");
-    });
-  }
-  setupEventListeners();
-});
+document.addEventListener("DOMContentLoaded", setupEventListeners);
 
 function setupEventListeners() {
   // Toggle camera scanner
@@ -184,18 +74,6 @@ function setupEventListeners() {
       }
       analyzeBarcode(barcode);
     }
-  });
-
-  // Demo pills
-  document.querySelectorAll(".btn-demo").forEach(button => {
-    button.addEventListener("click", () => {
-      const barcode = button.getAttribute("data-barcode");
-      barcodeInput.value = barcode;
-      if (isScanning) {
-        stopScanning();
-      }
-      analyzeBarcode(barcode);
-    });
   });
 
   // Botón para simular producto no encontrado en la API
@@ -429,18 +307,7 @@ async function analyzeBarcode(barcode) {
   showState(resultLoading);
   currentBarcodeQuery = barcode;
 
-  // 1. Check if mock data is available to bypass remote fetching for immediate feedback
-  if (DEMO_PRODUCTS[barcode]) {
-    setTimeout(() => {
-      currentDataSources = "Base de Datos Local (Demo)";
-      renderProductData(DEMO_PRODUCTS[barcode], barcode);
-      showDebugPanel(currentDataSources, DEMO_PRODUCTS[barcode]);
-      renderSourceResults(null);
-    }, 800);
-    return;
-  }
-
-  // 2. Query local server API (which checks local Mexican database + proxies Open Food Facts)
+  // 1. Query local server API (which checks local Mexican database + proxies Open Food Facts)
   try {
     const url = `/api/product/${barcode}`;
     const response = await fetch(url);
@@ -470,16 +337,12 @@ async function analyzeBarcode(barcode) {
       const parsedProduct = parseApiProduct(data.product);
       renderProductData(parsedProduct, barcode);
     }
-    showDebugPanel(currentDataSources, data);
-
   } catch (error) {
     console.warn("Fallo de conexión o CORS al consultar la API. Activando simulación offline para el código:", barcode);
     const simulatedProduct = generateSimulatedProduct(barcode);
     setTimeout(() => {
       currentDataSources = "Simulado (Sin Conexión)";
       renderProductData(simulatedProduct, barcode);
-      showDebugPanel(currentDataSources, null);
-      renderSourceResults(null);
     }, 500);
   }
 }
@@ -757,7 +620,6 @@ function renderProductData(product, barcode) {
       aiSect.style.display = "block";
       aiBt.onclick = () => queryAI(product.name, product.brand);
     }
-    if (debugPanel) debugPanel.classList.add("hidden");
     return;
   }
 
@@ -808,17 +670,14 @@ function renderProductData(product, barcode) {
       `;
       allergensList.appendChild(tag);
     });
-    if (debugPanel) debugPanel.classList.remove("hidden");
   } else if (product.allergensDataAvailable === false) {
     allergensSafeMsg.classList.remove("hidden");
     allergensSafeMsg.textContent = "Sin información de alérgenos (no hay datos en la base)";
     allergensSafeMsg.className = "safe-msg allergen-unknown";
-    if (debugPanel) debugPanel.classList.add("hidden");
   } else {
     allergensSafeMsg.classList.remove("hidden");
     allergensSafeMsg.textContent = "✓ Libre de alérgenos comunes declarados.";
     allergensSafeMsg.className = "safe-msg";
-    if (debugPanel) debugPanel.classList.remove("hidden");
   }
 
   showAiSection(product);
