@@ -52,12 +52,7 @@ function writeLocalDb(db) {
 app.get('/api/product/:barcode', async (req, res) => {
   try {
     const barcode = req.params.barcode;
-    const db = readLocalDb();
-
-    if (db[barcode]) {
-      return res.json({ status: 1, source: 'local', sourceLabel: 'Base de Datos Local', product: db[barcode] });
-    }
-
+    // const db = readLocalDb(); // BD local desactivada temporalmente
     // 2. Buscar en Open Food Facts (mundial)
     async function queryOFF(host, label) {
       const ctrl = new AbortController();
