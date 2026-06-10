@@ -742,6 +742,11 @@ function renderProductData(product, barcode) {
     productImg.src = "";
   }
 
+  if (dataSourceInfo) {
+    dataSourceInfo.textContent = currentDataSources ? `Fuente: ${currentDataSources}` : "";
+    dataSourceInfo.classList.remove("hidden");
+  }
+
   if (product.isFromFallback) {
     analysisGrid.classList.add("hidden");
     noNutritionAlert.classList.remove("hidden");
@@ -752,7 +757,6 @@ function renderProductData(product, barcode) {
       aiSect.style.display = "block";
       aiBt.onclick = () => queryAI(product.name, product.brand);
     }
-    if (dataSourceInfo) dataSourceInfo.classList.add("hidden");
     if (debugPanel) debugPanel.classList.add("hidden");
     return;
   }
@@ -804,25 +808,16 @@ function renderProductData(product, barcode) {
       `;
       allergensList.appendChild(tag);
     });
-    if (dataSourceInfo) {
-      dataSourceInfo.textContent = currentDataSources ? `Fuente: ${currentDataSources}` : "";
-      dataSourceInfo.classList.remove("hidden");
-    }
     if (debugPanel) debugPanel.classList.remove("hidden");
   } else if (product.allergensDataAvailable === false) {
     allergensSafeMsg.classList.remove("hidden");
     allergensSafeMsg.textContent = "Sin información de alérgenos (no hay datos en la base)";
     allergensSafeMsg.className = "safe-msg allergen-unknown";
-    if (dataSourceInfo) dataSourceInfo.classList.add("hidden");
     if (debugPanel) debugPanel.classList.add("hidden");
   } else {
     allergensSafeMsg.classList.remove("hidden");
     allergensSafeMsg.textContent = "✓ Libre de alérgenos comunes declarados.";
     allergensSafeMsg.className = "safe-msg";
-    if (dataSourceInfo) {
-      dataSourceInfo.textContent = currentDataSources ? `Fuente: ${currentDataSources}` : "";
-      dataSourceInfo.classList.remove("hidden");
-    }
     if (debugPanel) debugPanel.classList.remove("hidden");
   }
 
