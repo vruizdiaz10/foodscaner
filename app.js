@@ -110,13 +110,18 @@ const debugPanel = document.getElementById("debug-panel");
 
 function showDebugPanel(sourceLabel, rawData) {
   if (!debugPanel || !debugSource || !debugRaw) return;
+  console.log("[DEBUG] Mostrando panel - fuente:", sourceLabel);
   debugSource.textContent = sourceLabel || "N/A";
   debugRaw.textContent = rawData ? JSON.stringify(rawData, null, 2) : "N/A";
   debugPanel.style.display = "block";
+  debugPanel.open = true;
 }
 
 function hideDebugPanel() {
-  if (debugPanel) debugPanel.style.display = "none";
+  if (debugPanel) {
+    debugPanel.style.display = "none";
+    debugPanel.open = false;
+  }
 }
 const btnSimulateNotFound = document.getElementById("btn-simulate-not-found");
 const btnShowRegisterForm = document.getElementById("btn-show-register-form");
