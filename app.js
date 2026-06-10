@@ -1,5 +1,6 @@
 /* ==========================================================================
    Yomi Core JavaScript Logic
+   v3 - fix: AI section display with explicit inline style
    ========================================================================== */
 
 // Demo & Mock database for guaranteed success during evaluation and offline fallback
