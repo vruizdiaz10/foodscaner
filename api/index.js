@@ -174,6 +174,7 @@ app.get('/api/product/:barcode', async (req, res) => {
     if (usdaResult) return res.json(usdaResult);
 
     let upcTimeout;
+    let fallbackResult = null;
     try {
       const upcCtrl = new AbortController();
       upcTimeout = setTimeout(() => upcCtrl.abort(), 8000);
@@ -200,14 +201,14 @@ app.get('/api/product/:barcode', async (req, res) => {
           const hasGluten = detectedGluten.length > 0;
           const glutenDetails = hasGluten ? `Contiene gluten (detectado: ${detectedGluten.join(", ")})` : "Libre de gluten (Requiere verificar empaque)";
 
-          return res.json({ status: 1, source: 'local', sourceLabel: 'UpcItemDb', product: {
+          fallbackResult = { status: 1, source: 'local', sourceLabel: 'UpcItemDb', product: {
             name: item.title, brand: item.brand || "Desconocida",
             image: item.images?.[0] || "", isFood,
             category: item.category || (isFood ? "Comida / Bebida (Búsqueda global)" : "No Alimenticio"),
             gluten: { hasGluten, details: glutenDetails },
             calories: { value: 0, level: "No Especificado", percent: 10 },
             allergens: [], nutriscore: "-", isFromFallback: true
-          }});
+          }};
         }
       }
     } catch (error) {
@@ -238,14 +239,16 @@ app.get('/api/product/:barcode', async (req, res) => {
           const hasGlutenGtin = glutenKw.some(k => titleLower.includes(k) || descLower.includes(k));
           const glutenDetailsGtin = hasGlutenGtin ? "Contiene gluten (detectado en descripción)" : "Libre de gluten (Requiere verificar empaque)";
 
-          return res.json({ status: 1, source: 'local', sourceLabel: 'GTINHub', product: {
-            name: nameGtin, brand: p.brand || "Desconocida",
-            image: p.image_url || "", isFood: isFoodGtin,
-            category: p.category || (isFoodGtin ? "Comida / Bebida (GTINHub)" : "No Alimenticio"),
-            gluten: { hasGluten: hasGlutenGtin, details: glutenDetailsGtin },
-            calories: { value: 0, level: "No Especificado", percent: 10 },
-            allergens: [], nutriscore: "-", isFromFallback: true
-          }});
+          if (!fallbackResult) {
+            fallbackResult = { status: 1, source: 'local', sourceLabel: 'GTINHub', product: {
+              name: nameGtin, brand: p.brand || "Desconocida",
+              image: p.image_url || "", isFood: isFoodGtin,
+              category: p.category || (isFoodGtin ? "Comida / Bebida (GTINHub)" : "No Alimenticio"),
+              gluten: { hasGluten: hasGlutenGtin, details: glutenDetailsGtin },
+              calories: { value: 0, level: "No Especificado", percent: 10 },
+              allergens: [], nutriscore: "-", isFromFallback: true
+            }};
+          }
         }
       }
     } catch (error) {
@@ -253,6 +256,7 @@ app.get('/api/product/:barcode', async (req, res) => {
     }
 
     if (bestResult) return res.json(bestResult);
+    if (fallbackResult) return res.json(fallbackResult);
 
     return res.status(404).json({ status: 0, message: "Producto no encontrado" });
   } catch (err) {

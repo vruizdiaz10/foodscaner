@@ -176,6 +176,7 @@ app.get('/api/product/:barcode', async (req, res, next) => {
 
   // 5. Fallback a UpcItemDb (Base de datos global con 20 millones de productos comerciales)
   let upcTimeout;
+  let fallbackResult = null;
   try {
     const upcCtrl = new AbortController();
     upcTimeout = setTimeout(() => upcCtrl.abort(), 8000);
@@ -190,7 +191,6 @@ app.get('/api/product/:barcode', async (req, res, next) => {
         const item = upcData.items[0];
         console.log(`[Fallback API] Encontrado en UpcItemDb: ${item.title}`);
 
-        // Clasificar si es alimento analizando categorías y descripción
         const categoryLower = (item.category || "").toLowerCase();
         const titleLower = (item.title || "").toLowerCase();
         const descLower = (item.description || "").toLowerCase();
@@ -211,7 +211,6 @@ app.get('/api/product/:barcode', async (req, res, next) => {
 
         const isFood = !matchesNonFood;
 
-        // Intentar detectar presencia de gluten por ingredientes o descripción
         let hasGluten = false;
         let glutenDetails = "Libre de gluten (Requiere verificar empaque)";
         
@@ -223,27 +222,18 @@ app.get('/api/product/:barcode', async (req, res, next) => {
           glutenDetails = `Contiene gluten (detectado: ${detectedGluten.join(", ")})`;
         }
 
-        const normalizedProduct = {
+        fallbackResult = { status: 1, source: 'local', sourceLabel: 'UpcItemDb', product: {
           name: item.title,
           brand: item.brand || "Desconocida",
           image: item.images && item.images[0] ? item.images[0] : "",
           isFood: isFood,
           category: item.category || (isFood ? "Comida / Bebida (Búsqueda global)" : "No Alimenticio"),
-          gluten: {
-            hasGluten: hasGluten,
-            details: glutenDetails
-          },
-          calories: {
-            value: 0,
-            level: "No Especificado",
-            percent: 10
-          },
+          gluten: { hasGluten: hasGluten, details: glutenDetails },
+          calories: { value: 0, level: "No Especificado", percent: 10 },
           allergens: [],
           nutriscore: "-",
           isFromFallback: true
-        };
-
-        return res.json({ status: 1, source: 'local', sourceLabel: 'UpcItemDb', product: normalizedProduct });
+        }};
       }
     }
   } catch (error) {
@@ -280,20 +270,20 @@ app.get('/api/product/:barcode', async (req, res, next) => {
         const hasGlutenGtin = glutenKw.some(k => titleLower.includes(k) || descLower.includes(k));
         const glutenDetailsGtin = hasGlutenGtin ? "Contiene gluten (detectado en descripción)" : "Libre de gluten (Requiere verificar empaque)";
 
-        const normalizedGtin = {
-          name: nameGtin,
-          brand: brandGtin,
-          image: p.image_url || "",
-          isFood: isFoodGtin,
-          category: p.category || (isFoodGtin ? "Comida / Bebida (GTINHub)" : "No Alimenticio"),
-          gluten: { hasGluten: hasGlutenGtin, details: glutenDetailsGtin },
-          calories: { value: 0, level: "No Especificado", percent: 10 },
-          allergens: [],
-          nutriscore: "-",
-          isFromFallback: true
-        };
-
-        return res.json({ status: 1, source: 'local', sourceLabel: 'GTINHub', product: normalizedGtin });
+        if (!fallbackResult) {
+          fallbackResult = { status: 1, source: 'local', sourceLabel: 'GTINHub', product: {
+            name: nameGtin,
+            brand: brandGtin,
+            image: p.image_url || "",
+            isFood: isFoodGtin,
+            category: p.category || (isFoodGtin ? "Comida / Bebida (GTINHub)" : "No Alimenticio"),
+            gluten: { hasGluten: hasGlutenGtin, details: glutenDetailsGtin },
+            calories: { value: 0, level: "No Especificado", percent: 10 },
+            allergens: [],
+            nutriscore: "-",
+            isFromFallback: true
+          }};
+        }
       }
     }
   } catch (error) {
@@ -303,6 +293,7 @@ app.get('/api/product/:barcode', async (req, res, next) => {
 
   // Si no está en ninguna base de datos
   if (bestResult) return res.json(bestResult);
+  if (fallbackResult) return res.json(fallbackResult);
   return res.status(404).json({ status: 0, message: "Producto no encontrado" });
   } catch (err) {
     console.error(`[ERROR] Fallo en búsqueda de ${req.params.barcode}:`, err.message);
