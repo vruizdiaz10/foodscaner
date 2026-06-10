@@ -128,11 +128,15 @@ function renderSourceResults(results) {
   }
   results.forEach(r => {
     const tr = document.createElement("tr");
+    const foundClass = r.found ? "status-yes" : "status-no";
+    const foundText = r.found ? (r.productName || "Encontrado") : "—";
+    const allergenClass = r.allergenInfo && r.allergenInfo !== "—" && r.allergenInfo !== "Sin datos" ? "status-yes" : "status-no";
+    const nutritionClass = r.nutritionInfo && r.nutritionInfo !== "—" && r.nutritionInfo !== "Sin datos" ? "status-yes" : "status-no";
     tr.innerHTML = `
       <td>${r.source}</td>
-      <td class="${r.found ? 'status-yes' : 'status-no'}">${r.found ? "Sí" : "No"}</td>
-      <td class="${r.hasAllergenData ? 'status-yes' : 'status-no'}">${r.hasAllergenData ? "Sí" : "No"}</td>
-      <td class="${r.hasNutritionData ? 'status-yes' : 'status-no'}">${r.hasNutritionData ? "Sí" : "No"}</td>
+      <td class="${foundClass}" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${foundText}">${foundText}</td>
+      <td class="${allergenClass}">${r.allergenInfo || "—"}</td>
+      <td class="${nutritionClass}">${r.nutritionInfo || "—"}</td>
     `;
     tbody.appendChild(tr);
   });
