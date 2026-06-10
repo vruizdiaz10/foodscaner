@@ -72,12 +72,28 @@ app.get('/api/product/:barcode', async (req, res, next) => {
     return null;
   }
 
+  function hasOFFData(p) {
+    return !!(p.ingredients_text || (p.allergens_tags && p.allergens_tags.length > 0) || p.allergens_from_ingredients || (p.traces && p.traces !== "undefined"));
+  }
+
+  let bestResult = null;
+
   const worldResult = await queryOFF("world.openfoodfacts.org", "OFF World");
-  if (worldResult) return res.json({ ...worldResult, sourceLabel: "Open Food Facts (Mundial)" });
+  if (worldResult) {
+    if (hasOFFData(worldResult.product)) {
+      return res.json({ ...worldResult, sourceLabel: "Open Food Facts (Mundial)" });
+    }
+    bestResult = { ...worldResult, sourceLabel: "Open Food Facts (Mundial)" };
+  }
 
   // 3. Buscar en Open Food Facts (MX)
   const mxResult = await queryOFF("mx.openfoodfacts.org", "OFF MX");
-  if (mxResult) return res.json({ ...mxResult, sourceLabel: "Open Food Facts (MX)" });
+  if (mxResult) {
+    if (hasOFFData(mxResult.product)) {
+      return res.json({ ...mxResult, sourceLabel: "Open Food Facts (MX)" });
+    }
+    if (!bestResult) bestResult = { ...mxResult, sourceLabel: "Open Food Facts (MX)" };
+  }
 
   // 4. Buscar en USDA FoodData Central
   async function queryUSDA(barcode) {
@@ -286,6 +302,7 @@ app.get('/api/product/:barcode', async (req, res, next) => {
   }
 
   // Si no está en ninguna base de datos
+  if (bestResult) return res.json(bestResult);
   return res.status(404).json({ status: 0, message: "Producto no encontrado" });
   } catch (err) {
     console.error(`[ERROR] Fallo en búsqueda de ${req.params.barcode}:`, err.message);
