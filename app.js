@@ -93,7 +93,6 @@ const caloriesLevel = document.getElementById("calories-level");
 const cardCalories = document.getElementById("card-calories");
 const allergensList = document.getElementById("allergens-list");
 const allergensSafeMsg = document.getElementById("allergens-safe-msg");
-const nutriscoreVal = document.getElementById("nutriscore-val");
 const noNutritionAlert = document.getElementById("no-nutrition-alert");
 const analysisGrid = document.getElementById("analysis-grid");
 
@@ -194,7 +193,6 @@ function setupEventListeners() {
       isFood: document.getElementById("reg-isfood").value === "true",
       hasGluten: document.getElementById("reg-gluten").value === "true",
       calories: parseInt(document.getElementById("reg-calories").value) || 0,
-      nutriscore: document.getElementById("reg-nutriscore").value,
       allergens: allergens
     };
 
@@ -727,8 +725,8 @@ function renderProductData(product, barcode) {
     allergensSafeMsg.classList.remove("hidden");
   }
 
-  // Render Nutri-Score indicator
-  const score = (product.nutriscore || "").toLowerCase();
+  // Render Nutri-Score indicator (temporalmente deshabilitado)
+  /* const score = (product.nutriscore || "").toLowerCase();
   nutriscoreVal.textContent = score ? score.toUpperCase() : "N/D";
   
   document.querySelectorAll(".ns-score").forEach(el => {
@@ -740,7 +738,7 @@ function renderProductData(product, barcode) {
     if (activeBlock) {
       activeBlock.classList.add("active");
     }
-  }
+  } */
 }
 
 // Render rejected state screen

@@ -195,16 +195,6 @@
                     <label style="font-size: 0.75rem; color: var(--text-secondary);">Calorías (kcal/100g) *</label>
                     <input type="number" id="reg-calories" required min="0" placeholder="ej. 488" style="padding: 6px 10px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-glass); background: rgba(15, 23, 42, 0.8); color: white; font-size: 0.85rem; outline: none;">
                   </div>
-                  <div style="display: flex; flex-direction: column; gap: 2px;">
-                    <label style="font-size: 0.75rem; color: var(--text-secondary);">Nutri-Score *</label>
-                    <select id="reg-nutriscore" style="padding: 6px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-glass); background: rgba(15, 23, 42, 0.8); color: white; font-size: 0.85rem; outline: none;">
-                      <option value="a">A</option>
-                      <option value="b">B</option>
-                      <option value="c">C</option>
-                      <option value="d">D</option>
-                      <option value="e">E</option>
-                    </select>
-                  </div>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 2px;">
                   <label style="font-size: 0.75rem; color: var(--text-secondary);">Alérgenos (separados por coma)</label>
@@ -236,7 +226,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 28px; height: 28px; flex-shrink: 0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <div>
               <strong>Información nutrimental no disponible</strong>
-              <p style="margin: 4px 0 0; font-size: 0.85rem; opacity: 0.8;">Este producto fue encontrado en una base de datos externa que no proporciona detalles nutricionales. Los campos de gluten, calorías, alérgenos y Nutri-Score no están disponibles para este código.</p>
+              <p style="margin: 4px 0 0; font-size: 0.85rem; opacity: 0.8;">Este producto fue encontrado en una base de datos externa que no proporciona detalles nutricionales. Los campos de gluten, calorías y alérgenos no están disponibles para este código.</p>
             </div>
           </div>
 
@@ -289,7 +279,7 @@
               </div>
             </div>
 
-            <!-- TARJETA NUTRI-SCORE / INFORMACIÓN EXTRA -->
+            <!-- TARJETA NUTRI-SCORE / INFORMACIÓN EXTRA (oculta temporalmente)
             <div class="analysis-card full-width" id="card-nutriscore">
               <div class="nutriscore-wrapper">
                 <div class="score-labels">
@@ -305,6 +295,7 @@
                 </div>
               </div>
             </div>
+            -->
           </div>
         </div>
       </section>
