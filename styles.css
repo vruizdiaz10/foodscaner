@@ -852,11 +852,7 @@ body {
   color: #94a3b8; /* Slate-400 */
 }
 
-/* Unknown Allergens */
-.allergen-unknown {
-  color: #94a3b8;
-  opacity: 0.8;
-}
+
 
 /* Calories Indicator */
 .calories-low {
@@ -935,6 +931,11 @@ body {
   color: var(--accent-primary);
   font-weight: 600;
   font-size: 0.9rem;
+}
+
+.allergen-unknown {
+  color: var(--text-secondary);
+  opacity: 0.8;
 }
 
 /* Nutriscore Styling */
