@@ -55,7 +55,7 @@ app.get('/api/product/:barcode', async (req, res) => {
     const db = readLocalDb();
 
     if (db[barcode]) {
-      return res.json({ status: 1, source: 'local', product: db[barcode] });
+      return res.json({ status: 1, source: 'local', sourceLabel: 'Base de Datos Local', product: db[barcode] });
     }
 
     // 2. Buscar en Open Food Facts (mundial)
@@ -77,11 +77,11 @@ app.get('/api/product/:barcode', async (req, res) => {
     }
 
     const worldResult = await queryOFF("world.openfoodfacts.org", "OFF World");
-    if (worldResult) return res.json(worldResult);
+    if (worldResult) return res.json({ ...worldResult, sourceLabel: "Open Food Facts (Mundial)" });
 
     // 3. Buscar en Open Food Facts (MX)
     const mxResult = await queryOFF("mx.openfoodfacts.org", "OFF MX");
-    if (mxResult) return res.json(mxResult);
+    if (mxResult) return res.json({ ...mxResult, sourceLabel: "Open Food Facts (MX)" });
 
     // 4. Buscar en USDA FoodData Central
     async function queryUSDA(barcode) {
@@ -133,6 +133,7 @@ app.get('/api/product/:barcode', async (req, res) => {
             return {
               status: 1,
               source: 'local',
+              sourceLabel: 'USDA FoodData Central',
               product: {
                 name: item.description || "Producto Desconocido",
                 brand: item.brandName || item.brandOwner || "Desconocida",
@@ -188,7 +189,7 @@ app.get('/api/product/:barcode', async (req, res) => {
           const hasGluten = detectedGluten.length > 0;
           const glutenDetails = hasGluten ? `Contiene gluten (detectado: ${detectedGluten.join(", ")})` : "Libre de gluten (Requiere verificar empaque)";
 
-          return res.json({ status: 1, source: 'local', product: {
+          return res.json({ status: 1, source: 'local', sourceLabel: 'UpcItemDb', product: {
             name: item.title, brand: item.brand || "Desconocida",
             image: item.images?.[0] || "", isFood,
             category: item.category || (isFood ? "Comida / Bebida (Búsqueda global)" : "No Alimenticio"),
@@ -226,7 +227,7 @@ app.get('/api/product/:barcode', async (req, res) => {
           const hasGlutenGtin = glutenKw.some(k => titleLower.includes(k) || descLower.includes(k));
           const glutenDetailsGtin = hasGlutenGtin ? "Contiene gluten (detectado en descripción)" : "Libre de gluten (Requiere verificar empaque)";
 
-          return res.json({ status: 1, source: 'local', product: {
+          return res.json({ status: 1, source: 'local', sourceLabel: 'GTINHub', product: {
             name: nameGtin, brand: p.brand || "Desconocida",
             image: p.image_url || "", isFood: isFoodGtin,
             category: p.category || (isFoodGtin ? "Comida / Bebida (GTINHub)" : "No Alimenticio"),

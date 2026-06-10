@@ -49,7 +49,7 @@ app.get('/api/product/:barcode', async (req, res, next) => {
   // 1. Buscar en BD local primero
   if (db[barcode]) {
     console.log(`[Local DB] Producto encontrado: ${barcode} (${db[barcode].name})`);
-    return res.json({ status: 1, source: 'local', product: db[barcode] });
+    return res.json({ status: 1, source: 'local', sourceLabel: 'Base de Datos Local', product: db[barcode] });
   }
 
   // 2. Buscar en Open Food Facts (mundial)
@@ -80,11 +80,11 @@ app.get('/api/product/:barcode', async (req, res, next) => {
   }
 
   const worldResult = await queryOFF("world.openfoodfacts.org", "OFF World");
-  if (worldResult) return res.json(worldResult);
+  if (worldResult) return res.json({ ...worldResult, sourceLabel: "Open Food Facts (Mundial)" });
 
   // 3. Buscar en Open Food Facts (MX)
   const mxResult = await queryOFF("mx.openfoodfacts.org", "OFF MX");
-  if (mxResult) return res.json(mxResult);
+  if (mxResult) return res.json({ ...mxResult, sourceLabel: "Open Food Facts (MX)" });
 
   // 4. Buscar en USDA FoodData Central
   async function queryUSDA(barcode) {
@@ -136,6 +136,7 @@ app.get('/api/product/:barcode', async (req, res, next) => {
           return {
             status: 1,
             source: 'local',
+            sourceLabel: 'USDA FoodData Central',
             product: {
               name: item.description || "Producto Desconocido",
               brand: item.brandName || item.brandOwner || "Desconocida",
@@ -233,7 +234,7 @@ app.get('/api/product/:barcode', async (req, res, next) => {
           isFromFallback: true
         };
 
-        return res.json({ status: 1, source: 'local', product: normalizedProduct });
+        return res.json({ status: 1, source: 'local', sourceLabel: 'UpcItemDb', product: normalizedProduct });
       }
     }
   } catch (error) {
@@ -283,7 +284,7 @@ app.get('/api/product/:barcode', async (req, res, next) => {
           isFromFallback: true
         };
 
-        return res.json({ status: 1, source: 'local', product: normalizedGtin });
+        return res.json({ status: 1, source: 'local', sourceLabel: 'GTINHub', product: normalizedGtin });
       }
     }
   } catch (error) {

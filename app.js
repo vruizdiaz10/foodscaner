@@ -102,6 +102,22 @@ const rejectedMessage = document.getElementById("rejected-message");
 const rejectedProductName = document.getElementById("rejected-product-name");
 const rejectedProductCategory = document.getElementById("rejected-product-category");
 const notFoundActions = document.getElementById("not-found-actions");
+
+// Debug
+const debugSource = document.getElementById("debug-source");
+const debugRaw = document.getElementById("debug-raw");
+const debugPanel = document.getElementById("debug-panel");
+
+function showDebugPanel(sourceLabel, rawData) {
+  if (!debugPanel || !debugSource || !debugRaw) return;
+  debugSource.textContent = sourceLabel || "N/A";
+  debugRaw.textContent = rawData ? JSON.stringify(rawData, null, 2) : "N/A";
+  debugPanel.classList.remove("hidden");
+}
+
+function hideDebugPanel() {
+  if (debugPanel) debugPanel.classList.add("hidden");
+}
 const btnSimulateNotFound = document.getElementById("btn-simulate-not-found");
 const btnShowRegisterForm = document.getElementById("btn-show-register-form");
 const registerProductFormContainer = document.getElementById("register-product-form-container");
@@ -384,7 +400,8 @@ async function analyzeBarcode(barcode) {
   if (DEMO_PRODUCTS[barcode]) {
     setTimeout(() => {
       renderProductData(DEMO_PRODUCTS[barcode], barcode);
-    }, 800); // Simulate realistic quick delay
+      showDebugPanel("Base de Datos Local (Demo)", DEMO_PRODUCTS[barcode]);
+    }, 800);
     return;
   }
 
@@ -405,26 +422,28 @@ async function analyzeBarcode(barcode) {
     const data = await response.json();
 
     if (data.status === 0 || !data.product) {
+      hideDebugPanel();
       renderNotFound();
       return;
     }
 
+    const sourceLabel = data.sourceLabel || "Desconocido";
+
     // Process and normalize API data
     if (data.source === 'local') {
-      // Si viene de nuestra base de datos local pre-normalizada
       renderProductData(data.product, barcode);
     } else {
-      // Si viene de Open Food Facts externa, lo parseamos
       const parsedProduct = parseApiProduct(data.product);
       renderProductData(parsedProduct, barcode);
     }
+    showDebugPanel(sourceLabel, data);
 
   } catch (error) {
     console.warn("Fallo de conexión o CORS al consultar la API. Activando simulación offline para el código:", barcode);
-    // Generar un producto de simulación para que la app funcione sin internet o bajo protocolo file://
     const simulatedProduct = generateSimulatedProduct(barcode);
     setTimeout(() => {
       renderProductData(simulatedProduct, barcode);
+      showDebugPanel("Simulado (Sin Conexión)", null);
     }, 500);
   }
 }
@@ -743,6 +762,7 @@ function renderProductData(product, barcode) {
 
 // Render rejected state screen
 function renderRejected(product) {
+  hideDebugPanel();
   showState(resultRejected);
   rejectedTitle.textContent = product.isSimulated ? "Producto Simulado (No Alimento)" : "Producto Rechazado";
   rejectedMessage.textContent = product.isSimulated
@@ -754,6 +774,7 @@ function renderRejected(product) {
 
 // Render Not Found screen (extends rejected layout style)
 function renderNotFound() {
+  hideDebugPanel();
   showState(resultRejected);
   rejectedTitle.textContent = "No Encontrado";
   rejectedMessage.textContent = "No logramos identificar este código de barras en la base de datos abierta de Open Food Facts ni en nuestra base local.";
