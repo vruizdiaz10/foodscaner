@@ -304,6 +304,7 @@ function showState(stateElement) {
 
 // Main Business Logic: Barcode Identification & API Querying
 async function analyzeBarcode(barcode) {
+  _lastAiProductKey = "";
   showState(resultLoading);
   currentBarcodeQuery = barcode;
 
@@ -614,11 +615,10 @@ function renderProductData(product, barcode) {
     analysisGrid.classList.add("hidden");
     noNutritionAlert.classList.remove("hidden");
     const aiSect = document.getElementById("ai-query-section");
-    const aiBt = document.getElementById("btn-ai-query");
-    if (aiSect && aiBt) {
+    if (aiSect) {
       aiSect.classList.remove("hidden");
       aiSect.style.display = "block";
-      aiBt.onclick = () => queryAI(product.name, product.brand);
+      autoQueryAI(product.name, product.brand);
     }
     return;
   }
@@ -683,32 +683,34 @@ function renderProductData(product, barcode) {
   showAiSection(product);
 }
 
+let _lastAiProductKey = "";
+
 function showAiSection(product) {
   const aiSection = document.getElementById("ai-query-section");
-  const aiBtn = document.getElementById("btn-ai-query");
-  if (!aiSection || !aiBtn) return;
+  if (!aiSection) return;
   if (!product.allergensDataAvailable || (product.gluten && product.gluten.dataAvailable === false)) {
     aiSection.classList.remove("hidden");
     aiSection.style.display = "block";
-    aiBtn.onclick = () => queryAI(product.name, product.brand);
+    const key = product.name + "|" + product.brand;
+    if (key !== _lastAiProductKey) {
+      _lastAiProductKey = key;
+      autoQueryAI(product.name, product.brand);
+    }
   } else {
     aiSection.classList.add("hidden");
     aiSection.style.display = "";
   }
 }
 
-function queryAI(name, brand) {
+function autoQueryAI(name, brand) {
   const loading = document.getElementById("ai-query-loading");
   const result = document.getElementById("ai-query-result");
   const error = document.getElementById("ai-query-error");
-  const btn = document.getElementById("btn-ai-query");
-  if (!loading || !result || !error || !btn) return;
+  if (!loading || !result || !error) return;
 
   loading.classList.remove("hidden");
   result.classList.add("hidden");
   error.classList.add("hidden");
-  btn.disabled = true;
-  btn.textContent = "Consultando...";
 
   fetch('/api/ai-query', {
     method: 'POST',
@@ -718,8 +720,6 @@ function queryAI(name, brand) {
   .then(r => r.json())
   .then(data => {
     loading.classList.add("hidden");
-    btn.disabled = false;
-    btn.textContent = "Consultar IA";
     if (data.error) {
       error.textContent = "Error: " + (data.details || data.error);
       error.classList.remove("hidden");
@@ -730,8 +730,6 @@ function queryAI(name, brand) {
   })
   .catch(err => {
     loading.classList.add("hidden");
-    btn.disabled = false;
-    btn.textContent = "Consultar IA";
     error.textContent = "Error de conexión: " + err.message;
     error.classList.remove("hidden");
   });
