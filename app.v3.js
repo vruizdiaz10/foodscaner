@@ -614,12 +614,7 @@ function renderProductData(product, barcode) {
   if (product.isFromFallback) {
     analysisGrid.classList.add("hidden");
     noNutritionAlert.classList.remove("hidden");
-    const aiSect = document.getElementById("ai-query-section");
-    if (aiSect) {
-      aiSect.classList.remove("hidden");
-      aiSect.style.display = "block";
-      autoQueryAI(product.name, product.brand);
-    }
+    runAICheck(product);
     return;
   }
 
@@ -680,29 +675,32 @@ function renderProductData(product, barcode) {
     allergensSafeMsg.className = "safe-msg";
   }
 
-  showAiSection(product);
+  runAICheck(product);
 }
 
 let _lastAiProductKey = "";
 
-function showAiSection(product) {
+function runAICheck(product) {
   const aiSection = document.getElementById("ai-query-section");
+  const discrepancyBox = document.getElementById("ai-discrepancy");
   if (!aiSection) return;
-  if (!product.allergensDataAvailable || (product.gluten && product.gluten.dataAvailable === false)) {
+
+  showDBDisclaimer(product);
+
+  const isFallback = product.isFromFallback;
+  const isMissingData = !product.allergensDataAvailable || (product.gluten && product.gluten.dataAvailable === false);
+  if (isFallback || isMissingData) {
     aiSection.classList.remove("hidden");
     aiSection.style.display = "block";
-    const key = product.name + "|" + product.brand;
-    if (key !== _lastAiProductKey) {
-      _lastAiProductKey = key;
-      autoQueryAI(product.name, product.brand);
-    }
   } else {
     aiSection.classList.add("hidden");
     aiSection.style.display = "";
   }
-}
 
-function autoQueryAI(name, brand) {
+  const key = product.name + "|" + product.brand;
+  if (key === _lastAiProductKey) return;
+  _lastAiProductKey = key;
+
   const loading = document.getElementById("ai-query-loading");
   const result = document.getElementById("ai-query-result");
   const error = document.getElementById("ai-query-error");
@@ -715,24 +713,97 @@ function autoQueryAI(name, brand) {
   fetch('/api/ai-query', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, brand })
+    body: JSON.stringify({ name: product.name, brand: product.brand })
   })
   .then(r => r.json())
   .then(data => {
     loading.classList.add("hidden");
     if (data.error) {
-      error.textContent = "Error: " + (data.details || data.error);
-      error.classList.remove("hidden");
+      if (isFallback || isMissingData) {
+        error.textContent = "Error: " + (data.details || data.error);
+        error.classList.remove("hidden");
+      }
       return;
     }
+
     renderAIResult(data);
-    result.classList.remove("hidden");
+
+    if (isFallback || isMissingData) {
+      result.classList.remove("hidden");
+    } else {
+      compareWithDB(data, product);
+    }
   })
   .catch(err => {
     loading.classList.add("hidden");
-    error.textContent = "Error de conexión: " + err.message;
-    error.classList.remove("hidden");
+    if (isFallback || isMissingData) {
+      error.textContent = "Error de conexión: " + err.message;
+      error.classList.remove("hidden");
+    }
   });
+}
+
+function showDBDisclaimer(product) {
+  const el = document.getElementById("db-disclaimer");
+  const sourceEl = document.getElementById("db-disclaimer-source");
+  if (!el || !sourceEl) return;
+  if (product.isSimulated) {
+    el.classList.add("hidden");
+    return;
+  }
+  const sources = [];
+  if (currentDataSources) sources.push(currentDataSources);
+  if (product.isFromFallback) sources.push("UPCItemDB");
+  sourceEl.textContent = sources.join(" + ") || "Open Food Facts";
+  el.classList.remove("hidden");
+}
+
+function compareWithDB(aiData, product) {
+  const discBox = document.getElementById("ai-discrepancy");
+  const discGluten = document.getElementById("ai-discrepancy-gluten");
+  const discAllergens = document.getElementById("ai-discrepancy-allergens");
+  if (!discBox || !discGluten || !discAllergens) return;
+
+  discBox.classList.add("hidden");
+  discGluten.classList.add("hidden");
+  discAllergens.classList.add("hidden");
+
+  let hasDiscrepancy = false;
+
+  if (product.gluten && aiData.gluten && product.gluten.dataAvailable !== false) {
+    const dbVal = product.gluten.hasGluten;
+    const aiVal = aiData.gluten.hasGluten;
+    if (dbVal !== aiVal) {
+      discGluten.classList.remove("hidden");
+      if (dbVal) {
+        discGluten.innerHTML = "<strong>Gluten:</strong> La base de datos indica que <strong>contiene gluten</strong>, pero la IA sugiere que <strong>no contiene gluten</strong>.";
+      } else {
+        discGluten.innerHTML = "<strong>Gluten:</strong> La base de datos indica que <strong>no contiene gluten</strong>, pero la IA sugiere que <strong>contiene gluten</strong>.";
+      }
+      hasDiscrepancy = true;
+    }
+  }
+
+  if (product.allergensDataAvailable !== false && aiData.allergens) {
+    const dbAll = (product.allergens || []).map(a => a.toLowerCase().trim());
+    const aiAll = (aiData.allergens || []).map(a => a.toLowerCase().trim());
+    const dbSet = new Set(dbAll);
+    const aiSet = new Set(aiAll);
+    const dbOnly = dbAll.filter(a => !aiSet.has(a));
+    const aiOnly = aiAll.filter(a => !dbSet.has(a));
+    if (dbOnly.length > 0 || aiOnly.length > 0) {
+      discAllergens.classList.remove("hidden");
+      const parts = [];
+      if (dbOnly.length > 0) parts.push("En la base de datos pero no detectado por IA: <strong>" + dbOnly.join(", ") + "</strong>");
+      if (aiOnly.length > 0) parts.push("Detectado por IA pero no en la base de datos: <strong>" + aiOnly.join(", ") + "</strong>");
+      discAllergens.innerHTML = "<strong>Alérgenos:</strong> " + parts.join(". ");
+      hasDiscrepancy = true;
+    }
+  }
+
+  if (hasDiscrepancy) {
+    discBox.classList.remove("hidden");
+  }
 }
 
 function renderAIResult(data) {
