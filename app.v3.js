@@ -804,6 +804,11 @@ function renderProductData(product, barcode) {
       `;
       allergensList.appendChild(tag);
     });
+    if (dataSourceInfo) {
+      dataSourceInfo.textContent = currentDataSources ? `Fuente: ${currentDataSources}` : "";
+      dataSourceInfo.classList.remove("hidden");
+    }
+    if (debugPanel) debugPanel.classList.remove("hidden");
   } else if (product.allergensDataAvailable === false) {
     allergensSafeMsg.classList.remove("hidden");
     allergensSafeMsg.textContent = "Sin información de alérgenos (no hay datos en la base)";
