@@ -690,8 +690,13 @@ function renderProductData(product, barcode) {
   showState(resultSuccess);
 
   // Default data availability when not set by parser
-  if (product.gluten && product.gluten.dataAvailable === undefined) product.gluten.dataAvailable = true;
-  if (product.allergensDataAvailable === undefined) product.allergensDataAvailable = true;
+  if (product.isFromFallback) {
+    if (product.gluten && product.gluten.dataAvailable === undefined) product.gluten.dataAvailable = false;
+    if (product.allergensDataAvailable === undefined) product.allergensDataAvailable = false;
+  } else {
+    if (product.gluten && product.gluten.dataAvailable === undefined) product.gluten.dataAvailable = true;
+    if (product.allergensDataAvailable === undefined) product.allergensDataAvailable = true;
+  }
 
   // Set header details
   productName.textContent = product.name;
