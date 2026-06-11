@@ -233,7 +233,7 @@ app.get('/api/product/:barcode', async (req, res) => {
             {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ query: barcode, dataType: ["Branded"], pageSize: 1 }),
+              body: JSON.stringify({ query: barcode, dataType: ["Branded"], pageSize: 5 }),
               signal: ctrl.signal
             }
           );
@@ -241,8 +241,18 @@ app.get('/api/product/:barcode', async (req, res) => {
           if (response.ok) {
             const data = await response.json();
             if (data.foods && data.foods.length > 0) {
-              const item = data.foods[0];
-              console.log(`[USDA] Encontrado en FoodData Central: ${item.description}`);
+              // Verificar que el GTIN/UPC coincida con el código buscado
+              const matched = data.foods.find(f => {
+                const upc = (f.gtinUpc || "").replace(/\D/g, "");
+                const barcodeClean = barcode.replace(/\D/g, "");
+                return upc && (upc === barcodeClean || upc.endsWith(barcodeClean) || barcodeClean.endsWith(upc));
+              });
+              if (!matched) {
+                console.log(`[USDA] Resultado descartado: ningún GTIN coincide con ${barcode}`);
+                return null;
+              }
+              const item = matched;
+              console.log(`[USDA] Encontrado en FoodData Central: ${item.description} (GTIN: ${item.gtinUpc})`);
 
               let kcal = 0;
               if (item.foodNutrients) {

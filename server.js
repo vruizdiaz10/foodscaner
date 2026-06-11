@@ -116,6 +116,10 @@ app.get('/api/product/:barcode', async (req, res, next) => {
   }
 
   // 4. Buscar en USDA FoodData Central
+  if (barcode.startsWith("750")) {
+    sourceResults.push({ source: "USDA FoodData Central", found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
+    console.log(`[USDA] Saltado: código 750 (México)`);
+  } else {
   async function queryUSDA(barcode) {
     const USDA_API_KEY = "wT50TCqGVpmeEfLhVbFZNpTBU4SVgiqNOlEp1iBK";
     const ctrl = new AbortController();
@@ -127,7 +131,7 @@ app.get('/api/product/:barcode', async (req, res, next) => {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: barcode, dataType: ["Branded"], pageSize: 1 }),
+          body: JSON.stringify({ query: barcode, dataType: ["Branded"], pageSize: 5 }),
           signal: ctrl.signal
         }
       );
@@ -135,8 +139,18 @@ app.get('/api/product/:barcode', async (req, res, next) => {
       if (response.ok) {
         const data = await response.json();
         if (data.foods && data.foods.length > 0) {
-          const item = data.foods[0];
-          console.log(`[USDA] Encontrado en FoodData Central: ${item.description}`);
+          // Verificar que el GTIN/UPC coincida con el código buscado
+          const matched = data.foods.find(f => {
+            const upc = (f.gtinUpc || "").replace(/\D/g, "");
+            const barcodeClean = barcode.replace(/\D/g, "");
+            return upc && (upc === barcodeClean || upc.endsWith(barcodeClean) || barcodeClean.endsWith(upc));
+          });
+          if (!matched) {
+            console.log(`[USDA] Resultado descartado: ningún GTIN coincide con ${barcode}`);
+            return null;
+          }
+          const item = matched;
+          console.log(`[USDA] Encontrado en FoodData Central: ${item.description} (GTIN: ${item.gtinUpc})`);
 
           let kcal = 0;
           if (item.foodNutrients) {
@@ -202,6 +216,7 @@ app.get('/api/product/:barcode', async (req, res, next) => {
     return res.json({ ...usdaResult, sourceResults });
   } else {
     sourceResults.push({ source: "USDA FoodData Central", found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
+  }
   }
 
   // 5. Fallback a UpcItemDb (Base de datos global con 20 millones de productos comerciales)
