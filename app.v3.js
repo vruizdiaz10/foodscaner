@@ -776,9 +776,10 @@ function compareWithDB(aiData, product) {
     if (dbVal !== aiVal) {
       discGluten.classList.remove("hidden");
       if (dbVal) {
-        discGluten.innerHTML = "<strong>Gluten:</strong> La información declarada indica que contiene gluten, pero la IA sugiere que podría no contenerlo.";
+        discGluten.innerHTML = "<strong>Gluten:</strong> La información declarada indica que contiene gluten, pero la IA no pudo confirmarlo.";
       } else {
-        discGluten.innerHTML = "<strong>Gluten:</strong> La información declarada indica que no contiene gluten, pero la IA sugiere que podría contenerlo.";
+        const details = aiData.gluten.details || "ingredientes detectados por IA";
+        discGluten.innerHTML = `<strong>Gluten:</strong> Si bien la información declarada indica que no contiene gluten, se sospecha la presencia de gluten debido a: ${details}`;
       }
       hasDiscrepancy = true;
     }
