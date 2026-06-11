@@ -839,8 +839,9 @@ function compareWithDB(aiData, product) {
         glutenLine.innerHTML = `<strong>Gluten:</strong> La información declarada indica que contiene gluten, pero la IA no pudo confirmarlo${confNote}.`;
       } else {
         const details = aiData.gluten.details || "ingredientes detectados por IA";
-        const prefix = conf === "baja" ? "La IA sugiere posible presencia de gluten sin certeza" : "se sospecha la posible presencia de gluten debido a que";
-        glutenLine.innerHTML = `<strong>Gluten:</strong> Si bien la información declarada no indica contenido de gluten, ${prefix} ${details}${confNote}`;
+        const prefix = conf === "baja" ? "la IA sugiere posible presencia de gluten sin certeza" : "se sospecha la posible presencia de gluten debido a que";
+        const sep = conf === "baja" ? ": " : " ";
+        glutenLine.innerHTML = `<strong>Gluten:</strong> Si bien la información declarada no indica contenido de gluten, ${prefix}${sep}${details}${confNote}.`;
       }
       hasDiscrepancy = true;
     }
@@ -853,7 +854,7 @@ function compareWithDB(aiData, product) {
     const dbSet = new Set(dbAll);
     const aiOnly = aiAll.filter(a => !dbSet.has(a) && !tracesSet.has(a));
     if (aiOnly.length > 0) {
-      allergensLine.innerHTML = "<strong>Alérgenos:</strong> Es posible la presencia de alérgenos adicionales no incluidos en la información declarada: <strong>" + aiOnly.join(", ") + "</strong>";
+      allergensLine.innerHTML = "<strong>Alérgenos:</strong> Es posible la presencia de alérgenos adicionales no incluidos en la información declarada: <strong>" + aiOnly.join(", ") + "</strong>.";
       hasDiscrepancy = true;
     }
   }
