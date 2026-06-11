@@ -488,8 +488,75 @@ function parseApiProduct(product) {
     });
   }
 
-  // Fallback: detectar alérgenos en el texto de ingredientes cuando faltan tags estructurados
-  if (allergensList.length === 0 && ingredientsText) {
+  // Extract traces from ingredients text (puede contener / may contain)
+  const tracesList = [];
+  let searchableIngredients = ingredientsText;
+  const mayContainPattern = /(?:puede\s+contener|may\s+contain|contiene\s+trazas|trazas?\s*de)\s*:?\s*([^.!;]+)/gi;
+  let mcMatch;
+  while ((mcMatch = mayContainPattern.exec(ingredientsText)) !== null) {
+    const section = mcMatch[0].toLowerCase();
+    const traceKeywords = [
+      { kw: "cacahuate", label: "Cacahuates (Maní)" },
+      { kw: "cacahuete", label: "Cacahuates (Maní)" },
+      { kw: "peanut", label: "Cacahuates (Maní)" },
+      { kw: "soya", label: "Soja" },
+      { kw: "soja", label: "Soja" },
+      { kw: "soy", label: "Soja" },
+      { kw: "leche", label: "Leche (Lácteos)" },
+      { kw: "milk", label: "Leche (Lácteos)" },
+      { kw: "huevo", label: "Huevos" },
+      { kw: "egg", label: "Huevos" },
+      { kw: "nueces", label: "Frutos de cáscara (Nueces)" },
+      { kw: "nuez", label: "Frutos de cáscara (Nueces)" },
+      { kw: "almendra", label: "Frutos de cáscara (Nueces)" },
+      { kw: "almond", label: "Frutos de cáscara (Nueces)" },
+      { kw: "trigo", label: "Trigo (Gluten)" },
+      { kw: "wheat", label: "Trigo (Gluten)" },
+      { kw: "gluten", label: "Gluten" },
+      { kw: "pescado", label: "Pescado" },
+      { kw: "fish", label: "Pescado" },
+      { kw: "mostaza", label: "Mostaza" },
+      { kw: "mustard", label: "Mostaza" },
+      { kw: "sésamo", label: "Sésamo" },
+      { kw: "sesame", label: "Sésamo" },
+      { kw: "sulfito", label: "Sulfitos" },
+      { kw: "crustáceo", label: "Crustáceos" },
+      { kw: "crustacean", label: "Crustáceos" },
+      { kw: "molusco", label: "Moluscos" },
+      { kw: "mollusc", label: "Moluscos" },
+      { kw: "altramuz", label: "Altramuces" },
+      { kw: "lupin", label: "Altramuces" },
+      { kw: "apio", label: "Apio" },
+      { kw: "celery", label: "Apio" }
+    ];
+    traceKeywords.forEach(({ kw, label }) => {
+      const regex = new RegExp("\\b" + kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      if (regex.test(section) && !allergensList.includes(label) && !tracesList.includes(label)) {
+        tracesList.push(label);
+      }
+    });
+    // Remove this section from searchable text so it won't be falsely detected as declared allergen
+    searchableIngredients = searchableIngredients.replace(mcMatch[0], "");
+  }
+
+  // Then add traces from traces_tags and raw traces field
+  tracesTags.forEach(tag => {
+    const mapped = mapAllergenTag(tag);
+    if (!allergensList.includes(mapped) && !tracesList.includes(mapped)) {
+      tracesList.push(mapped);
+    }
+  });
+  if (product.traces && product.traces !== "undefined") {
+    product.traces.split(",").forEach(t => {
+      const cleaned = t.replace(/^[a-z]{2}:/, "").trim();
+      if (cleaned && !allergensList.includes(cleaned) && !tracesList.includes(cleaned)) {
+        tracesList.push(cleaned.charAt(0).toUpperCase() + cleaned.slice(1));
+      }
+    });
+  }
+
+  // Fallback: detectar alérgenos en el texto de ingredientes (excluyendo secciones de "puede contener")
+  if (allergensList.length === 0 && searchableIngredients) {
     const allergenKeywords = [
       { kw: "cacahuate", label: "Cacahuates (Maní)" },
       { kw: "cacahuete", label: "Cacahuates (Maní)" },
@@ -509,7 +576,7 @@ function parseApiProduct(product) {
       { kw: "almond", label: "Frutos de cáscara (Nueces)" },
       { kw: "trigo", label: "Trigo (Gluten)" },
       { kw: "wheat", label: "Trigo (Gluten)" },
-      { kw: "gluten", label: "Trigo (Gluten)" },
+      { kw: "gluten", label: "Gluten" },
       { kw: "pescado", label: "Pescado" },
       { kw: "fish", label: "Pescado" },
       { kw: "mostaza", label: "Mostaza" },
@@ -528,26 +595,8 @@ function parseApiProduct(product) {
     ];
     allergenKeywords.forEach(({ kw, label }) => {
       const regex = new RegExp("\\b" + kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-      if (regex.test(ingredientsText) && !allergensList.includes(label)) {
+      if (regex.test(searchableIngredients) && !allergensList.includes(label)) {
         allergensList.push(label);
-      }
-    });
-  }
-
-  // Extract traces (may contain) from traces_tags and raw traces field
-  const tracesList = [];
-  tracesTags.forEach(tag => {
-    const mapped = mapAllergenTag(tag);
-    if (!allergensList.includes(mapped) && !tracesList.includes(mapped)) {
-      tracesList.push(mapped);
-    }
-  });
-  // Fallback: parse raw traces string if tracesTags is empty
-  if (tracesList.length === 0 && product.traces && product.traces !== "undefined") {
-    product.traces.split(",").forEach(t => {
-      const cleaned = t.replace(/^[a-z]{2}:/, "").trim();
-      if (cleaned && !allergensList.includes(cleaned) && !tracesList.includes(cleaned)) {
-        tracesList.push(cleaned.charAt(0).toUpperCase() + cleaned.slice(1));
       }
     });
   }
