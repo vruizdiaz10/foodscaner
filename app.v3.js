@@ -828,11 +828,8 @@ function showDBDisclaimer(product) {
     el.classList.add("hidden");
     return;
   }
-  const sources = [];
-  if (currentDataSources) sources.push(currentDataSources);
-  if (product.isFromFallback) sources.push("UPCItemDB");
-  if (product._enrichedFrom) sources.push(product._enrichedFrom);
-  sourceEl.textContent = sources.join(" + ") || "Open Food Facts";
+  const srcText = document.getElementById("data-source-info")?.textContent?.replace("Fuente: ", "") || currentDataSources || "Open Food Facts";
+  sourceEl.textContent = srcText;
   el.classList.remove("hidden");
 }
 
