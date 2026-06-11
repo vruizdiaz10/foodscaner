@@ -8,6 +8,7 @@ const app = express();
 app.use(express.json());
 
 const DB_PATH = '/tmp/local_mexican_products.json';
+const CACHE_PATH = '/tmp/foodscaner_cache.json';
 
 const CANDIDATES = [
   path.join(__dirname, '..', 'local_mexican_products.json'),
@@ -50,11 +51,100 @@ function writeLocalDb(db) {
   }
 }
 
+// --- Cache Helpers ---
+function readCache() {
+  try {
+    if (!fs.existsSync(CACHE_PATH)) return {};
+    return JSON.parse(fs.readFileSync(CACHE_PATH, 'utf8'));
+  } catch { return {}; }
+}
+
+function writeCache(cache) {
+  try {
+    fs.writeFileSync(CACHE_PATH, JSON.stringify(cache, null, 2), 'utf8');
+  } catch {}
+}
+
+function getCacheEntry(barcode) {
+  const cache = readCache();
+  return cache[barcode] || null;
+}
+
+function setCacheEntry(barcode, response, source, offLastModified = null) {
+  const cache = readCache();
+  const now = Math.floor(Date.now() / 1000);
+  cache[barcode] = {
+    response,
+    source,
+    offLastModified,
+    cachedAt: now
+  };
+  writeCache(cache);
+}
+
+function removeCacheEntry(barcode) {
+  const cache = readCache();
+  delete cache[barcode];
+  writeCache(cache);
+}
+
+// Lightweight OFF freshness check: fetch only last_modified_t (tiny payload)
+async function checkOFFLastModified(barcode, host) {
+  try {
+    const url = `https://${host}/api/v2/product/${barcode}.json?fields=last_modified_t`;
+    const resp = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.status === 1 && data.product) {
+        return data.product.last_modified_t || null;
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+const OFF_FRESH_TTL = 3600;      // 1h: serve from cache unconditionally
+const OFF_STALE_TTL = 86400;     // 24h: serve from cache if OFF unchanged
+const FALLBACK_TTL = 604800;     // 7d: serve from cache for non-OFF sources
+
+// --- Product Search ---
 app.get('/api/product/:barcode', async (req, res) => {
   try {
     const barcode = req.params.barcode;
-    // const db = readLocalDb(); // BD local desactivada temporalmente
-    // 2. Buscar en Open Food Facts (mundial)
+    const now = Math.floor(Date.now() / 1000);
+
+    // ----- CACHE LOOKUP -----
+    const cached = getCacheEntry(barcode);
+    if (cached) {
+      const age = now - cached.cachedAt;
+      const isOFF = cached.source && cached.source.includes("Open Food Facts");
+
+      if (age < OFF_FRESH_TTL) {
+        return res.json(cached.response);
+      }
+
+      if (isOFF && cached.offLastModified !== undefined && age < OFF_STALE_TTL) {
+        const host = cached.source.includes("Mundial") ? "world.openfoodfacts.org" : "mx.openfoodfacts.org";
+        const currentModified = await checkOFFLastModified(barcode, host);
+        if (currentModified !== null && currentModified === cached.offLastModified) {
+          cache[barcode].cachedAt = now;
+          writeCache(cache);
+          return res.json(cached.response);
+        }
+      }
+
+      if (!isOFF && age < FALLBACK_TTL) {
+        cache[barcode].cachedAt = now;
+        writeCache(cache);
+        return res.json(cached.response);
+      }
+
+      removeCacheEntry(barcode);
+    }
+
+    // ----- FULL QUERY (cache miss or stale) -----
     async function queryOFF(host, label) {
       const ctrl = new AbortController();
       const t = setTimeout(() => ctrl.abort(), 8000);
@@ -77,6 +167,8 @@ app.get('/api/product/:barcode', async (req, res) => {
     }
 
     let bestResult = null;
+    let bestSource = "";
+    let bestLastModified = null;
     const sourceResults = [];
 
     const worldResult = await queryOFF("world.openfoodfacts.org", "OFF World");
@@ -89,9 +181,14 @@ app.get('/api/product/:barcode', async (req, res) => {
       const ni = (p.nutriments && p.nutriments['energy-kcal_100g']) ? Math.round(p.nutriments['energy-kcal_100g']) + " kcal/100g" : "Sin datos";
       sourceResults.push({ source: "Open Food Facts (Mundial)", found: true, productName: pn, brandName: bn, allergenInfo: ai, nutritionInfo: ni });
       if (hd) {
-        return res.json({ ...worldResult, sourceLabel: "Open Food Facts (Mundial)", sourceResults });
+        const respData = { ...worldResult, sourceLabel: "Open Food Facts (Mundial)", sourceResults };
+        const lastMod = worldResult.product.last_modified_t || null;
+        setCacheEntry(barcode, respData, "Open Food Facts (Mundial)", lastMod);
+        return res.json(respData);
       }
       bestResult = { ...worldResult, sourceLabel: "Open Food Facts (Mundial)" };
+      bestSource = "Open Food Facts (Mundial)";
+      bestLastModified = worldResult.product.last_modified_t || null;
     } else {
       sourceResults.push({ source: "Open Food Facts (Mundial)", found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
     }
@@ -106,102 +203,117 @@ app.get('/api/product/:barcode', async (req, res) => {
       const ni = (p.nutriments && p.nutriments['energy-kcal_100g']) ? Math.round(p.nutriments['energy-kcal_100g']) + " kcal/100g" : "Sin datos";
       sourceResults.push({ source: "Open Food Facts (MX)", found: true, productName: pn, brandName: bn, allergenInfo: ai, nutritionInfo: ni });
       if (hd) {
-        return res.json({ ...mxResult, sourceLabel: "Open Food Facts (MX)", sourceResults });
+        const respData = { ...mxResult, sourceLabel: "Open Food Facts (MX)", sourceResults };
+        const lastMod = mxResult.product.last_modified_t || null;
+        setCacheEntry(barcode, respData, "Open Food Facts (MX)", lastMod);
+        return res.json(respData);
       }
-      if (!bestResult) bestResult = { ...mxResult, sourceLabel: "Open Food Facts (MX)" };
+      if (!bestResult) {
+        bestResult = { ...mxResult, sourceLabel: "Open Food Facts (MX)" };
+        bestSource = "Open Food Facts (MX)";
+        bestLastModified = mxResult.product.last_modified_t || null;
+      }
     } else {
       sourceResults.push({ source: "Open Food Facts (MX)", found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
     }
 
-    // 4. Buscar en USDA FoodData Central
-    async function queryUSDA(barcode) {
-      const USDA_API_KEY = "wT50TCqGVpmeEfLhVbFZNpTBU4SVgiqNOlEp1iBK";
-      const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), 8000);
-      try {
-        console.log(`[USDA] Buscando en FoodData Central: ${barcode}`);
-        const response = await fetch(
-          `https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${USDA_API_KEY}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: barcode, dataType: ["Branded"], pageSize: 1 }),
-            signal: ctrl.signal
-          }
-        );
-        clearTimeout(t);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.foods && data.foods.length > 0) {
-            const item = data.foods[0];
-            console.log(`[USDA] Encontrado en FoodData Central: ${item.description}`);
-
-            let kcal = 0;
-            if (item.foodNutrients) {
-              const energy = item.foodNutrients.find(n => n.nutrientName === "Energy" && n.unitName === "KCAL");
-              if (energy) kcal = Math.round(energy.value);
-            }
-
-            let energyLevel = "Bajo";
-            let percent = 0;
-            if (kcal > 400) { energyLevel = "Alto"; percent = Math.min(100, Math.round((kcal / 600) * 100)); }
-            else if (kcal >= 150) { energyLevel = "Moderado"; percent = Math.round((kcal / 400) * 100); }
-            else { energyLevel = "Bajo"; percent = Math.max(3, Math.round((kcal / 150) * 50)); }
-
-            const ingredientsText = (item.ingredients || "").toLowerCase();
-            const allergenText = (item.allergenWarning || "").toLowerCase();
-            const glutenKeywords = ["trigo","wheat","harina","flour","avena","oat","cebada","barley","centeno","rye","gluten","espelta","kamut"];
-            const detectedGluten = glutenKeywords.filter(kw => ingredientsText.includes(kw) || allergenText.includes(kw));
-            const hasGluten = detectedGluten.length > 0;
-            const glutenDetails = hasGluten ? `Contiene gluten (detectado: ${detectedGluten.join(", ")})` : "Libre de gluten (Según ingredientes USDA)";
-
-            let allergens = [];
-            if (item.allergenWarning) {
-              item.allergenWarning.split(",").forEach(a => { const t = a.trim(); if (t && !allergens.includes(t)) allergens.push(t); });
-            }
-
-            return {
-              status: 1,
-              source: 'local',
-              sourceLabel: 'USDA FoodData Central',
-              product: {
-                name: item.description || "Producto Desconocido",
-                brand: item.brandName || item.brandOwner || "Desconocida",
-                image: "",
-                isFood: true,
-                category: item.brandedFoodCategory || item.foodCategory || "Alimento (USDA)",
-                gluten: { hasGluten, details: glutenDetails },
-                calories: { value: kcal, level: energyLevel, percent },
-                allergens: allergens,
-                nutriscore: "-"
-              }
-            };
-          }
-        }
-      } catch (error) {
-        clearTimeout(t);
-        if (error.name === 'AbortError') {
-          console.warn(`[USDA] Timeout (8s) consultando FoodData Central`);
-        } else {
-          console.warn(`[USDA] Error consultando FoodData Central:`, error.message);
-        }
-      }
-      return null;
-    }
-
-    const usdaResult = await queryUSDA(barcode);
-    if (usdaResult) {
-      const p = usdaResult.product;
-      const pn = p.name || "Producto";
-      const bn = p.brand || "—";
-      const ai = (p.allergens && p.allergens.length > 0) ? p.allergens.join(", ") : (p.gluten && p.gluten.dataAvailable !== false ? p.gluten.details : "Sin datos");
-      const ni = (p.calories && p.calories.value > 0) ? p.calories.value + " kcal/100g" : "Sin datos";
-      sourceResults.push({ source: "USDA FoodData Central", found: true, productName: pn, brandName: bn, allergenInfo: ai, nutritionInfo: ni });
-      return res.json({ ...usdaResult, sourceResults });
-    } else {
+    // USDA FoodData Central — only if not a 750 prefix (doesn't find MX products)
+    if (barcode.startsWith("750")) {
       sourceResults.push({ source: "USDA FoodData Central", found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
+      console.log(`[USDA] Saltado: código 750 (México)`);
+    } else {
+      async function queryUSDA(barcode) {
+        const USDA_API_KEY = "wT50TCqGVpmeEfLhVbFZNpTBU4SVgiqNOlEp1iBK";
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 8000);
+        try {
+          console.log(`[USDA] Buscando en FoodData Central: ${barcode}`);
+          const response = await fetch(
+            `https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${USDA_API_KEY}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ query: barcode, dataType: ["Branded"], pageSize: 1 }),
+              signal: ctrl.signal
+            }
+          );
+          clearTimeout(t);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.foods && data.foods.length > 0) {
+              const item = data.foods[0];
+              console.log(`[USDA] Encontrado en FoodData Central: ${item.description}`);
+
+              let kcal = 0;
+              if (item.foodNutrients) {
+                const energy = item.foodNutrients.find(n => n.nutrientName === "Energy" && n.unitName === "KCAL");
+                if (energy) kcal = Math.round(energy.value);
+              }
+
+              let energyLevel = "Bajo";
+              let percent = 0;
+              if (kcal > 400) { energyLevel = "Alto"; percent = Math.min(100, Math.round((kcal / 600) * 100)); }
+              else if (kcal >= 150) { energyLevel = "Moderado"; percent = Math.round((kcal / 400) * 100); }
+              else { energyLevel = "Bajo"; percent = Math.max(3, Math.round((kcal / 150) * 50)); }
+
+              const ingredientsText = (item.ingredients || "").toLowerCase();
+              const allergenText = (item.allergenWarning || "").toLowerCase();
+              const glutenKeywords = ["trigo","wheat","harina","flour","avena","oat","cebada","barley","centeno","rye","gluten","espelta","kamut"];
+              const detectedGluten = glutenKeywords.filter(kw => ingredientsText.includes(kw) || allergenText.includes(kw));
+              const hasGluten = detectedGluten.length > 0;
+              const glutenDetails = hasGluten ? `Contiene gluten (detectado: ${detectedGluten.join(", ")})` : "Libre de gluten (Según ingredientes USDA)";
+
+              let allergens = [];
+              if (item.allergenWarning) {
+                item.allergenWarning.split(",").forEach(a => { const t = a.trim(); if (t && !allergens.includes(t)) allergens.push(t); });
+              }
+
+              return {
+                status: 1,
+                source: 'local',
+                sourceLabel: 'USDA FoodData Central',
+                product: {
+                  name: item.description || "Producto Desconocido",
+                  brand: item.brandName || item.brandOwner || "Desconocida",
+                  image: "",
+                  isFood: true,
+                  category: item.brandedFoodCategory || item.foodCategory || "Alimento (USDA)",
+                  gluten: { hasGluten, details: glutenDetails },
+                  calories: { value: kcal, level: energyLevel, percent },
+                  allergens: allergens,
+                  nutriscore: "-"
+                }
+              };
+            }
+          }
+        } catch (error) {
+          clearTimeout(t);
+          if (error.name === 'AbortError') {
+            console.warn(`[USDA] Timeout (8s) consultando FoodData Central`);
+          } else {
+            console.warn(`[USDA] Error consultando FoodData Central:`, error.message);
+          }
+        }
+        return null;
+      }
+
+      const usdaResult = await queryUSDA(barcode);
+      if (usdaResult) {
+        const p = usdaResult.product;
+        const pn = p.name || "Producto";
+        const bn = p.brand || "—";
+        const ai = (p.allergens && p.allergens.length > 0) ? p.allergens.join(", ") : (p.gluten && p.gluten.dataAvailable !== false ? p.gluten.details : "Sin datos");
+        const ni = (p.calories && p.calories.value > 0) ? p.calories.value + " kcal/100g" : "Sin datos";
+        sourceResults.push({ source: "USDA FoodData Central", found: true, productName: pn, brandName: bn, allergenInfo: ai, nutritionInfo: ni });
+        const respData = { ...usdaResult, sourceResults };
+        setCacheEntry(barcode, respData, "USDA FoodData Central", null);
+        return res.json(respData);
+      } else {
+        sourceResults.push({ source: "USDA FoodData Central", found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
+      }
     }
 
+    // Fallback: UPCItemDb (solo nombre/marca, sin datos nutrimentales)
     let upcTimeout;
     let fallbackResult = null;
     try {
@@ -248,52 +360,17 @@ app.get('/api/product/:barcode', async (req, res) => {
       sourceResults.push({ source: "UpcItemDb", found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
     }
 
-    let gtinTimeout;
-    try {
-      const gtinCtrl = new AbortController();
-      gtinTimeout = setTimeout(() => gtinCtrl.abort(), 8000);
-      const gtinResponse = await fetch(`https://gtinhub.com/api/v1/product/${barcode}`, { signal: gtinCtrl.signal });
-      clearTimeout(gtinTimeout);
-
-      if (gtinResponse.ok) {
-        const gtinData = await gtinResponse.json();
-        if (gtinData.found && gtinData.product) {
-          const p = gtinData.product;
-          const nameGtin = p.name || "Producto Desconocido";
-          const titleLower = nameGtin.toLowerCase();
-          const descLower = (p.description || "").toLowerCase();
-          const catLower = (p.category || "").toLowerCase();
-
-          const foodKw = ["food","beverage","snack","grocery","refresco","comida","bebida","leche","soda","cereal","pasta","arroz","chocolate","jugo"];
-          const nonFoodKw = ["shampoo","soap","jabón","detergent","limpieza","higiene","cosmetics","pet food"];
-          const isFoodGtin = !nonFoodKw.some(k => titleLower.includes(k) || catLower.includes(k) || descLower.includes(k));
-
-          const glutenKw = ["trigo","wheat","harina","flour","avena","oat","cebada","barley"];
-          const hasGlutenGtin = glutenKw.some(k => titleLower.includes(k) || descLower.includes(k));
-          const glutenDetailsGtin = hasGlutenGtin ? "Contiene gluten (detectado en descripción)" : "Libre de gluten (Requiere verificar empaque)";
-
-          if (!fallbackResult) {
-            fallbackResult = { status: 1, source: 'local', sourceLabel: 'GTINHub', product: {
-              name: nameGtin, brand: p.brand || "Desconocida",
-              image: p.image_url || "", isFood: isFoodGtin,
-              category: p.category || (isFoodGtin ? "Comida / Bebida (GTINHub)" : "No Alimenticio"),
-              gluten: { hasGluten: hasGlutenGtin, details: glutenDetailsGtin },
-              calories: { value: 0, level: "No Especificado", percent: 10 },
-              allergens: [], nutriscore: "-", isFromFallback: true
-            }};
-          }
-          sourceResults.push({ source: "GTINHub", found: true, productName: nameGtin, brandName: p.brand || "—", allergenInfo: "Sin datos", nutritionInfo: "Sin datos" });
-        } else {
-          sourceResults.push({ source: "GTINHub", found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
-        }
-      }
-    } catch (error) {
-      clearTimeout(gtinTimeout);
-      sourceResults.push({ source: "GTINHub", found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
+    // Solo UPCItemDb (GTINHub omitido: misma calidad de datos, redundante)
+    if (bestResult) {
+      const respData = { ...bestResult, sourceResults };
+      setCacheEntry(barcode, respData, bestSource, bestLastModified);
+      return res.json(respData);
     }
-
-    if (bestResult) return res.json({ ...bestResult, sourceResults });
-    if (fallbackResult) return res.json({ ...fallbackResult, sourceResults });
+    if (fallbackResult) {
+      const respData = { ...fallbackResult, sourceResults };
+      setCacheEntry(barcode, respData, "UpcItemDb", null);
+      return res.json(respData);
+    }
 
     return res.status(404).json({ status: 0, message: "Producto no encontrado", sourceResults });
   } catch (err) {
