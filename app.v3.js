@@ -65,6 +65,11 @@ function setupEventListeners() {
     e.preventDefault();
     const barcode = barcodeInput.value.trim();
     if (barcode) {
+      if (!/^\d+$/.test(barcode)) {
+        renderError("Código inválido", "Ingresa solo números (código de barras).");
+        barcodeInput.value = "";
+        return;
+      }
       if (isScanning) {
         stopScanning();
       }
