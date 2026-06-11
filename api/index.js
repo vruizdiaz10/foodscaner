@@ -349,16 +349,14 @@ REGLAS ESTRICTAS:
 - Si hasGluten es false, details debe explicar por qué se considera libre de gluten.`;
 
   try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://foodscaner.vercel.app',
-        'X-Title': 'Yomi Food Scanner'
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'openrouter/free',
+        model: 'llama-3.3-70b-versatile',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.1
       })
@@ -366,12 +364,12 @@ REGLAS ESTRICTAS:
 
     if (!response.ok) {
       const errorText = await response.text();
-      return res.status(502).json({ error: "Error de OpenRouter", details: errorText });
+      return res.status(502).json({ error: "Error de Groq", details: errorText });
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
-    if (!content) return res.status(502).json({ error: "Respuesta vacía de OpenRouter" });
+    if (!content) return res.status(502).json({ error: "Respuesta vacía de Groq" });
 
     let parsed;
     try {
