@@ -567,7 +567,8 @@ REGLAS ESTRICTAS:
 - Si hasGluten es false, details debe explicar por qué no se detectaron ingredientes con gluten en la lista proporcionada.
 - Distingue entre "contiene gluten como ingrediente" (hasGluten: true) y "puede contener trazas" (hasGluten: false, menciónalo en notes).
 - SI TIENES DUDAS, usa confidence "baja" y explica en notes.
-- No inventes ingredientes. Si la lista de ingredientes no contiene algo, no lo incluyas en tu análisis.`;
+- No inventes ingredientes. Si la lista de ingredientes no contiene algo, no lo incluyas en tu análisis.
+- No incluyas gluten ni cereales con gluten (trigo, cebada, centeno, avena) en la lista de alérgenos, ya que el gluten se analiza en un campo separado.`;
 
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {

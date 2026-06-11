@@ -326,6 +326,11 @@ async function analyzeBarcode(barcode) {
 }
 
 // Parse Open Food Facts JSON data structures
+function isGlutenRelated(label) {
+  const l = label.toLowerCase().trim();
+  return ["gluten", "trigo", "trigo (gluten)", "cebada", "centeno", "avena"].includes(l) || l.includes("(gluten)");
+}
+
 function parseApiProduct(product) {
   const name = product.product_name || product.product_name_es || "Producto Desconocido";
   const brand = product.brands || "Marca genérica";
@@ -584,6 +589,10 @@ function parseApiProduct(product) {
     });
   }
 
+  // Filter out gluten-related items from allergens and traces (handled in dedicated section)
+  const filteredAllergens = allergensList.filter(a => !isGlutenRelated(a));
+  const filteredTraces = tracesList.filter(t => !isGlutenRelated(t));
+
   // Nutriscore
   const nutriscore = product.nutriscore_grade || product.nutrition_grades || "-";
 
@@ -605,9 +614,9 @@ function parseApiProduct(product) {
       level: energyLevel,
       percent: percent
     },
-    allergens: allergensList,
+    allergens: filteredAllergens,
     allergensDataAvailable,
-    traces: [...new Map(tracesList.map(t => [t.toLowerCase().trim(), t])).values()],
+    traces: [...new Map(filteredTraces.map(t => [t.toLowerCase().trim(), t])).values()],
     nutriscore: nutriscore,
     _enrichedFrom: product._enrichedFrom || null,
     ingredientsText: product.ingredients_text || null
@@ -849,11 +858,37 @@ function compareWithDB(aiData, product) {
   }
 
   if (product.allergensDataAvailable !== false && aiData.allergens) {
-    const tracesSet = new Set((product.traces || []).map(a => a.toLowerCase().trim().replace(/\s*\(.*?\)\s*/g, "")));
-    const dbAll = (product.allergens || []).map(a => a.toLowerCase().trim().replace(/\s*\(.*?\)\s*/g, ""));
-    const aiAll = (aiData.allergens || []).map(a => a.toLowerCase().trim().replace(/\s*\(.*?\)\s*/g, ""));
-    const dbSet = new Set(dbAll);
-    const aiOnly = aiAll.filter(a => !dbSet.has(a) && !tracesSet.has(a));
+    const allKnown = [
+      ...(product.allergens || []),
+      ...(product.traces || [])
+    ].map(a => a.toLowerCase().trim());
+
+    // Filter out gluten-related allergens from AI response (handled in dedicated section)
+    const aiAll = (aiData.allergens || []).filter(a => !isGlutenRelated(a)).map(a => a.toLowerCase().trim());
+
+    // Canonical mapping: resolve synonyms to a single form
+    const canonical = (s) => {
+      const map = { "soya": "soja", "mani": "cacahuate", "cacahuete": "cacahuate", "lácteos": "leche" };
+      return map[s] || s;
+    };
+
+    // Extract all meaningful words (including from parentheticals)
+    const allWords = (s) => s.replace(/[^a-záéíóúñ]/g, " ").split(/\s+/).filter(w => w.length > 2);
+
+    const matchesKnown = (a) => {
+      const ca = canonical(a);
+      // exact match after canonical normalization (remove parentheticals for this check)
+      const stripParen = (s) => s.replace(/\s*\(.*?\)\s*/g, "").trim();
+      if (allKnown.some(k => canonical(stripParen(k)) === stripParen(ca))) return true;
+      // shared word match (including parenthetical content)
+      const wa = allWords(ca);
+      return allKnown.some(k => {
+        const wk = allWords(k);
+        return wa.some(w => wk.includes(w));
+      });
+    };
+
+    const aiOnly = aiAll.filter(a => !matchesKnown(a));
     if (aiOnly.length > 0) {
       allergensLine.innerHTML = "<strong>Alérgenos:</strong> Es posible la presencia de alérgenos adicionales no incluidos en la información declarada: <strong>" + aiOnly.join(", ") + "</strong>.";
       hasDiscrepancy = true;
