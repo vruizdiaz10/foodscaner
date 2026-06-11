@@ -37,12 +37,8 @@ const rejectedMessage = document.getElementById("rejected-message");
 const rejectedProductName = document.getElementById("rejected-product-name");
 const rejectedProductCategory = document.getElementById("rejected-product-category");
 const notFoundActions = document.getElementById("not-found-actions");
-
 const dataSourceInfo = document.getElementById("data-source-info");
 
-
-
-const btnSimulateNotFound = document.getElementById("btn-simulate-not-found");
 const btnShowRegisterForm = document.getElementById("btn-show-register-form");
 const registerProductFormContainer = document.getElementById("register-product-form-container");
 const newProductForm = document.getElementById("new-product-form");
@@ -73,29 +69,6 @@ function setupEventListeners() {
         stopScanning();
       }
       analyzeBarcode(barcode);
-    }
-  });
-
-  // Botón para simular producto no encontrado en la API
-  btnSimulateNotFound.addEventListener("click", () => {
-    if (currentBarcodeQuery) {
-      const simulatedProduct = generateSimulatedProduct(currentBarcodeQuery);
-      // Personalizar si el usuario mencionó que es un refresco específico
-      if (currentBarcodeQuery === "7501071140945") {
-        simulatedProduct.name = "Refresco Squirt Cantarito 600ml";
-        simulatedProduct.brand = "Squirt (Peñafiel)";
-        simulatedProduct.category = "Refrescos y Bebidas Gasificadas";
-        simulatedProduct.gluten.hasGluten = false;
-        simulatedProduct.gluten.details = "Sin Gluten (Libre de trazas)";
-        simulatedProduct.calories = {
-          value: 38,
-          level: "Bajo",
-          percent: 7
-        };
-        simulatedProduct.allergens = [];
-        simulatedProduct.nutriscore = "e";
-      }
-      renderProductData(simulatedProduct, currentBarcodeQuery);
     }
   });
 
@@ -949,11 +922,6 @@ function renderNotFound() {
   rejectedMessage.textContent = "No logramos identificar este código de barras en la base de datos abierta de Open Food Facts ni en nuestra base local.";
   rejectedProductName.textContent = "Desconocido";
   rejectedProductCategory.textContent = "N/D";
-  
-  // Mostrar opción para que el usuario pueda simularlo en caliente
-  if (notFoundActions) {
-    notFoundActions.classList.remove("hidden");
-  }
 }
 
 // Render generic error message screen (extends rejected layout style)
