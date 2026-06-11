@@ -813,7 +813,8 @@ function runAICheck(product) {
       return;
     }
 
-    if (product.isFromFallback) {
+    const missingData = product.gluten?.dataAvailable === false || product.allergensDataAvailable === false;
+    if (product.isFromFallback || missingData) {
       renderAIResult(data);
       result.classList.remove("hidden");
     } else {
