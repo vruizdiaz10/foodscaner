@@ -602,7 +602,7 @@ function parseApiProduct(product) {
     },
     allergens: allergensList,
     allergensDataAvailable,
-    traces: tracesList,
+    traces: [...new Map(tracesList.map(t => [t.toLowerCase().trim(), t])).values()],
     nutriscore: nutriscore
   };
 }
