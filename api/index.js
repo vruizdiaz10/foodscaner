@@ -340,8 +340,13 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin explicaciones adicionales, 
   "notes": "notas adicionales"
 }
 
-IMPORTANTE: Si hasGluten es true, details DEBE incluir el ingrediente o razón específica por la que se detecta gluten (ej: "Contiene trigo en ingredientes", "el nombre sugiere harina de trigo"). Si hasGluten es false, details debe indicar por qué se considera libre de gluten.
-Si no tienes suficiente información usa confidence "baja" y explica en notes.`;
+REGLAS ESTRICTAS:
+- hasGluten debe ser true SOLO si puedes identificar un ingrediente específico que contenga gluten en la composición del producto (ej: "harina de trigo", "avena"). NO marques hasGluten true solo por el nombre del producto o su categoría.
+- Si no puedes identificar un ingrediente específico con gluten, hasGluten debe ser false y explica en details por qué (ej: "el producto no declara ingredientes con gluten").
+- Distingue entre "contiene gluten como ingrediente" (hasGluten: true) y "puede contener trazas" (hasGluten: false, menciónalo en notes).
+- SI TIENES DUDAS, usa confidence "baja" y explica en notes.
+- Si hasGluten es true, details DEBE incluir el ingrediente exacto que contiene gluten. No inventes ingredientes.
+- Si hasGluten es false, details debe explicar por qué se considera libre de gluten.`;
 
   try {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {

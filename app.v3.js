@@ -775,11 +775,14 @@ function compareWithDB(aiData, product) {
     const aiVal = aiData.gluten.hasGluten;
     if (dbVal !== aiVal) {
       discGluten.classList.remove("hidden");
+      const conf = (aiData.confidence || "").toLowerCase();
+      const confNote = conf && conf !== "alta" ? ` (Confianza: ${conf})` : "";
       if (dbVal) {
-        discGluten.innerHTML = "<strong>Gluten:</strong> La información declarada indica que contiene gluten, pero la IA no pudo confirmarlo.";
+        discGluten.innerHTML = `<strong>Gluten:</strong> La información declarada indica que contiene gluten, pero la IA no pudo confirmarlo${confNote}.`;
       } else {
         const details = aiData.gluten.details || "ingredientes detectados por IA";
-        discGluten.innerHTML = `<strong>Gluten:</strong> Si bien la información declarada indica que no contiene gluten, se sospecha la presencia de gluten debido a: ${details}`;
+        const prefix = conf === "baja" ? "La IA sugiere posible presencia de gluten sin certeza" : "se sospecha la presencia de gluten debido a";
+        discGluten.innerHTML = `<strong>Gluten:</strong> Si bien la información declarada indica que no contiene gluten, ${prefix}: ${details}${confNote}`;
       }
       hasDiscrepancy = true;
     }
