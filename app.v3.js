@@ -776,9 +776,9 @@ function compareWithDB(aiData, product) {
     if (dbVal !== aiVal) {
       discGluten.classList.remove("hidden");
       if (dbVal) {
-        discGluten.innerHTML = "<strong>Gluten:</strong> La base de datos indica que contiene gluten, pero la IA sugiere que podría no contenerlo.";
+        discGluten.innerHTML = "<strong>Gluten:</strong> La información declarada indica que contiene gluten, pero la IA sugiere que podría no contenerlo.";
       } else {
-        discGluten.innerHTML = "<strong>Gluten:</strong> La base de datos indica que no contiene gluten, pero la IA sugiere que podría contenerlo.";
+        discGluten.innerHTML = "<strong>Gluten:</strong> La información declarada indica que no contiene gluten, pero la IA sugiere que podría contenerlo.";
       }
       hasDiscrepancy = true;
     }
@@ -792,8 +792,8 @@ function compareWithDB(aiData, product) {
     const aiOnly = aiAll.filter(a => !dbSet.has(a));
     const dbOnly = dbAll.filter(a => !aiSet.has(a));
     const parts = [];
-    if (aiOnly.length > 0) parts.push("La IA detectó posibles alérgenos adicionales no registrados en la base de datos: <strong>" + aiOnly.join(", ") + "</strong>");
-    if (dbOnly.length > 0) parts.push("Alérgenos registrados en la base de datos no confirmados por la IA: <strong>" + dbOnly.join(", ") + "</strong>");
+    if (aiOnly.length > 0) parts.push("La IA detectó posibles alérgenos adicionales no incluidos en la información declarada: <strong>" + aiOnly.join(", ") + "</strong>");
+    if (dbOnly.length > 0) parts.push("Alérgenos en la información declarada no confirmados por la IA: <strong>" + dbOnly.join(", ") + "</strong>");
     if (parts.length > 0) {
       discAllergens.classList.remove("hidden");
       discAllergens.innerHTML = "<strong>Alérgenos:</strong> " + parts.join(". ");
