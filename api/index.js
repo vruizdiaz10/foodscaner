@@ -427,7 +427,47 @@ app.get('/api/product/:barcode', async (req, res) => {
       sourceResults.push({ source: "UpcItemDb", found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
     }
 
-    // Solo UPCItemDb (GTINHub omitido: misma calidad de datos, redundante)
+    // GTINHub fallback (cobertura diferente a UPCItemDb)
+    if (!fallbackResult) {
+      let gtinTimeout;
+      try {
+        const gtinCtrl = new AbortController();
+        gtinTimeout = setTimeout(() => gtinCtrl.abort(), 8000);
+        console.log(`[GTINHub] Buscando: ${barcode}`);
+        const gtinResponse = await fetch(`https://gtinhub.com/api/v1/product/${barcode}`, { signal: gtinCtrl.signal });
+        clearTimeout(gtinTimeout);
+        if (gtinResponse.ok) {
+          const gtinData = await gtinResponse.json();
+          if (gtinData.found && gtinData.product) {
+            const p = gtinData.product;
+            const nameGtin = p.name || "Producto";
+            const brandGtin = p.brand || p.brandOwner || "Desconocida";
+            const titleLower = (p.name || "").toLowerCase();
+            const descLower = (p.description || "").toLowerCase();
+            const catLower = (p.category || "").toLowerCase();
+            const foodKw = ["food","beverage","snack","grocery","comida","dulce","galleta","bebida","leche","cereal","pasta","arroz"];
+            const nonFoodKw = ["shampoo","soap","jabón","detergent","limpieza","higiene","cosmetics","pet food","mascotas"];
+            const isFoodGtin = !nonFoodKw.some(k => titleLower.includes(k) || descLower.includes(k) || catLower.includes(k));
+            const hasGlutenGtin = ["trigo","wheat","harina","flour","avena","oat","cebada","barley","centeno","rye"].some(k => titleLower.includes(k) || descLower.includes(k));
+            fallbackResult = { status: 1, source: 'local', sourceLabel: 'GTINHub', product: {
+              name: nameGtin, brand: brandGtin, image: p.image || "", isFood: isFoodGtin,
+              category: p.category || (isFoodGtin ? "Comida / Bebida (GTINHub)" : "No Alimenticio"),
+              gluten: { hasGluten: hasGlutenGtin, details: hasGlutenGtin ? "Contiene gluten (detectado)" : "Libre de gluten (Requiere verificar empaque)" },
+              calories: { value: 0, level: "No Especificado", percent: 10 },
+              allergens: [], nutriscore: "-", isFromFallback: true
+            }};
+            sourceResults.push({ source: "GTINHub", found: true, productName: nameGtin, brandName: brandGtin, allergenInfo: "Sin datos", nutritionInfo: "Sin datos" });
+          } else {
+            sourceResults.push({ source: "GTINHub", found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
+          }
+        }
+      } catch (error) {
+        clearTimeout(gtinTimeout);
+        sourceResults.push({ source: "GTINHub", found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
+      }
+    }
+
+    // Enrichment: buscar por nombre en USDA si OFF/UPCItemDb/GTINHub tiene nombre pero faltan datos
     if (bestResult) {
       const p = bestResult.product;
       const pName = p.product_name || p.product_name_es || "";
