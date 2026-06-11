@@ -831,6 +831,7 @@ function showDBDisclaimer(product) {
   const sources = [];
   if (currentDataSources) sources.push(currentDataSources);
   if (product.isFromFallback) sources.push("UPCItemDB");
+  if (product._enrichedFrom) sources.push(product._enrichedFrom);
   sourceEl.textContent = sources.join(" + ") || "Open Food Facts";
   el.classList.remove("hidden");
 }
