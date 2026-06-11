@@ -867,9 +867,9 @@ function compareWithDB(aiData, product) {
   }
 
   if (product.allergensDataAvailable !== false && aiData.allergens) {
-    const tracesSet = new Set((product.traces || []).map(a => a.toLowerCase().trim()));
-    const dbAll = (product.allergens || []).map(a => a.toLowerCase().trim());
-    const aiAll = (aiData.allergens || []).map(a => a.toLowerCase().trim());
+    const tracesSet = new Set((product.traces || []).map(a => a.toLowerCase().trim().replace(/\s*\(.*?\)\s*/g, "")));
+    const dbAll = (product.allergens || []).map(a => a.toLowerCase().trim().replace(/\s*\(.*?\)\s*/g, ""));
+    const aiAll = (aiData.allergens || []).map(a => a.toLowerCase().trim().replace(/\s*\(.*?\)\s*/g, ""));
     const dbSet = new Set(dbAll);
     const aiOnly = aiAll.filter(a => !dbSet.has(a) && !tracesSet.has(a));
     if (aiOnly.length > 0) {
