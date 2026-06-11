@@ -444,7 +444,7 @@ function parseApiProduct(product) {
   const allergensMap = {
     "en:milk": "Leche (Lácteos)",
     "en:eggs": "Huevos",
-    "en:peanuts": "Cacahuetes",
+    "en:peanuts": "Cacahuates (Maní)",
     "en:nuts": "Frutos de cáscara (Nueces)",
     "en:soybeans": "Soja",
     "en:mustard": "Mostaza",
@@ -454,15 +454,27 @@ function parseApiProduct(product) {
     "en:sesame-seeds": "Sésamo",
     "en:sulphur-dioxide-and-sulphites": "Sulfitos",
     "en:crustaceans": "Crustáceos",
-    "en:lupins": "Altramuces"
+    "en:lupins": "Altramuces",
+    "en:gluten": "Gluten",
+    "en:wheat": "Trigo",
+    "en:barley": "Cebada",
+    "en:rye": "Centeno",
+    "en:oats": "Avena"
   };
 
+  const mapAllergenTag = (tag) => {
+    const lower = tag.toLowerCase();
+    return allergensMap[lower] || lower.replace(/^[a-z]{2}:/, "").replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  };
+
+  const allAllergenTags = (product.allergens_tags || []).map(t => t.toLowerCase());
+  const tracesTags = (product.traces_tags || []).map(t => t.toLowerCase());
+
   const allergensList = [];
-  allergensTags.forEach(tag => {
-    // Clean tag prefix e.g., "en:milk" or "es:leche"
-    const matched = allergensMap[tag];
-    if (matched && !allergensList.includes(matched)) {
-      allergensList.push(matched);
+  allAllergenTags.forEach(tag => {
+    const mapped = mapAllergenTag(tag);
+    if (!allergensList.includes(mapped)) {
+      allergensList.push(mapped);
     }
   });
 
@@ -522,6 +534,24 @@ function parseApiProduct(product) {
     });
   }
 
+  // Extract traces (may contain) from traces_tags and raw traces field
+  const tracesList = [];
+  tracesTags.forEach(tag => {
+    const mapped = mapAllergenTag(tag);
+    if (!allergensList.includes(mapped) && !tracesList.includes(mapped)) {
+      tracesList.push(mapped);
+    }
+  });
+  // Fallback: parse raw traces string if tracesTags is empty
+  if (tracesList.length === 0 && product.traces && product.traces !== "undefined") {
+    product.traces.split(",").forEach(t => {
+      const cleaned = t.replace(/^[a-z]{2}:/, "").trim();
+      if (cleaned && !allergensList.includes(cleaned) && !tracesList.includes(cleaned)) {
+        tracesList.push(cleaned.charAt(0).toUpperCase() + cleaned.slice(1));
+      }
+    });
+  }
+
   // Nutriscore
   const nutriscore = product.nutriscore_grade || product.nutrition_grades || "-";
 
@@ -545,6 +575,7 @@ function parseApiProduct(product) {
     },
     allergens: allergensList,
     allergensDataAvailable,
+    traces: tracesList,
     nutriscore: nutriscore
   };
 }
@@ -673,6 +704,24 @@ function renderProductData(product, barcode) {
     allergensSafeMsg.classList.remove("hidden");
     allergensSafeMsg.textContent = "✓ Libre de alérgenos comunes declarados.";
     allergensSafeMsg.className = "safe-msg";
+  }
+
+  // Render traces (may contain)
+  const tracesSection = document.getElementById("traces-section");
+  const tracesContainer = document.getElementById("traces-list");
+  if (tracesSection && tracesContainer) {
+    tracesContainer.innerHTML = "";
+    if (product.traces && product.traces.length > 0) {
+      product.traces.forEach(t => {
+        const tag = document.createElement("span");
+        tag.className = "allergen-tag traces-tag";
+        tag.textContent = t;
+        tracesContainer.appendChild(tag);
+      });
+      tracesSection.classList.remove("hidden");
+    } else {
+      tracesSection.classList.add("hidden");
+    }
   }
 
   runAICheck(product);

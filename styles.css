@@ -1067,6 +1067,26 @@ body {
   line-height: 1.4;
 }
 
+/* Traces (may contain) section */
+.traces-section {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.traces-title {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.traces-tag {
+  background: rgba(255, 200, 0, 0.1);
+  border-color: rgba(255, 200, 0, 0.25);
+  color: var(--text-secondary);
+}
+
 /* Source results table */
 .source-table-wrapper {
   margin-top: 0.5rem;
