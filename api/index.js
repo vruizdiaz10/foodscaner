@@ -358,10 +358,9 @@ REGLAS ESTRICTAS:
         'X-Title': 'Yomi Food Scanner'
       },
       body: JSON.stringify({
-        model: 'openrouter/auto',
+        model: 'openrouter/free',
         messages: [{ role: 'user', content: prompt }],
-        temperature: 0.1,
-        route: 'free'
+        temperature: 0.1
       })
     });
 
