@@ -839,8 +839,8 @@ function compareWithDB(aiData, product) {
         glutenLine.innerHTML = `<strong>Gluten:</strong> La información declarada indica que contiene gluten, pero la IA no pudo confirmarlo${confNote}.`;
       } else {
         const details = aiData.gluten.details || "ingredientes detectados por IA";
-        const prefix = conf === "baja" ? "La IA sugiere posible presencia de gluten sin certeza" : "se sospecha la presencia de gluten debido a";
-        glutenLine.innerHTML = `<strong>Gluten:</strong> Si bien la información declarada no indica contenido de gluten, ${prefix}: ${details}${confNote}`;
+        const prefix = conf === "baja" ? "La IA sugiere posible presencia de gluten sin certeza" : "se sospecha la posible presencia de gluten debido a que";
+        glutenLine.innerHTML = `<strong>Gluten:</strong> Si bien la información declarada no indica contenido de gluten, ${prefix} ${details}${confNote}`;
       }
       hasDiscrepancy = true;
     }
