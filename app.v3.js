@@ -887,10 +887,11 @@ function compareWithDB(aiData, product) {
   }
 
   if (product.allergensDataAvailable !== false && aiData.allergens) {
+    const tracesSet = new Set((product.traces || []).map(a => a.toLowerCase().trim()));
     const dbAll = (product.allergens || []).map(a => a.toLowerCase().trim());
     const aiAll = (aiData.allergens || []).map(a => a.toLowerCase().trim());
     const dbSet = new Set(dbAll);
-    const aiOnly = aiAll.filter(a => !dbSet.has(a));
+    const aiOnly = aiAll.filter(a => !dbSet.has(a) && !tracesSet.has(a));
     if (aiOnly.length > 0) {
       discAllergens.classList.remove("hidden");
       discAllergens.innerHTML = "<strong>Alérgenos:</strong> Es posible la presencia de alérgenos adicionales no incluidos en la información declarada: <strong>" + aiOnly.join(", ") + "</strong>";
