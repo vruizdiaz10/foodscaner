@@ -537,6 +537,7 @@ function parseApiProduct(product) {
 
   // Check for positive labels indicating gluten-free
   const labelsTags = (product.labels_tags || []).map(t => t.toLowerCase());
+  const additivesTags = (product.additives_tags || []).map(t => t.toLowerCase());
   const isLabeledGlutenFree = labelsTags.some(tag => tag.includes("gluten-free") || tag.includes("sin-gluten") || tag.includes("libre-de-gluten") || tag.includes("no-gluten"));
 
   // Also check product name and ingredients text for explicit gluten-free claims
@@ -869,6 +870,52 @@ function parseApiProduct(product) {
     }
   }
 
+  // No recomendado para ciertos grupos
+  const notRecommended = [];
+  const ingredLower = (product.ingredients_text || "").toLowerCase();
+
+  // Edulcorantes → niños
+  const edulcorantesAdditives = ["en:e950","en:e951","en:e952","en:e954","en:e955","en:e959","en:e960","en:e961","en:e962","en:e965","en:e967","en:e968","en:e969"];
+  const hasEdulcoranteTag = additivesTags.some(t => edulcorantesAdditives.includes(t));
+  const edulcoranteKeywords = /edulcorante|sucralosa|stevia|glucósido|aspartame|acesulfame|sacarina|ciclamato|neohesperidina|taumatina|neotamo|advantamo|tagatosa|maltitol|lactitol|xilitol|eritritol|isomalt/i;
+  const hasEdulcoranteText = edulcoranteKeywords.test(ingredLower);
+  if (hasEdulcoranteTag || hasEdulcoranteText) {
+    notRecommended.push({ icon: "👶", grupo: "Niños", razon: "Contiene edulcorantes" });
+  }
+
+  // Cafeína → niños
+  const cafeinaKeywords = /\bcafeína\b|\bcafeina\b|\bcaffeine\b/i;
+  if (cafeinaKeywords.test(ingredLower)) {
+    if (!notRecommended.some(n => n.grupo === "Niños")) {
+      notRecommended.push({ icon: "👶", grupo: "Niños", razon: "Contiene cafeína" });
+    } else {
+      const idx = notRecommended.findIndex(n => n.grupo === "Niños");
+      notRecommended[idx].razon += " y cafeína";
+    }
+  }
+
+  // Aspartame → fenilcetonúricos
+  if (additivesTags.includes("en:e951") || /\baspartame\b/i.test(ingredLower)) {
+    notRecommended.push({ icon: "🧬", grupo: "Fenilcetonúricos", razon: "Contiene aspartame (fenilalanina)" });
+  }
+
+  // Azúcar alto → diabéticos
+  if (sugars !== null && sugarLevel === "Alto") {
+    notRecommended.push({ icon: "🩸", grupo: "Diabéticos", razon: `Alto en azúcares (${Math.round(sugars * 10) / 10}g/100g)` });
+  }
+
+  // Sodio alto → hipertensos
+  const sodiumMg = sodium !== null ? Math.round(sodium * 1000) : 0;
+  if (sodiumMg >= 300) {
+    notRecommended.push({ icon: "❤️", grupo: "Hipertensos", razon: `Alto en sodio (${sodiumMg}mg/100g)` });
+  }
+
+  // Lactosa → intolerantes
+  const hasLactosa = filteredAllergens.some(a => a.toLowerCase().includes("leche") || a.toLowerCase().includes("lácteos"));
+  if (hasLactosa) {
+    notRecommended.push({ icon: "🥛", grupo: "Intolerantes a lactosa", razon: "Contiene leche o derivados lácteos" });
+  }
+
   // Nutriscore
   const nutriscore = product.nutriscore_grade || product.nutrition_grades || "-";
 
@@ -916,7 +963,8 @@ function parseApiProduct(product) {
     ingredientsText: product.ingredients_text || null,
     nutriments: product.nutriments || null,
     dietary,
-    sellos
+    sellos,
+    notRecommended
   };
 }
 
@@ -1179,6 +1227,25 @@ function renderProductData(product, barcode) {
     }
   }
 
+  // Render No Recomendado Para section
+  const cardNotRec = document.getElementById("card-not-recommended");
+  const notRecContainer = document.getElementById("not-recommended-container");
+  if (cardNotRec && notRecContainer) {
+    notRecContainer.innerHTML = "";
+    if (product.notRecommended && product.notRecommended.length > 0) {
+      product.notRecommended.forEach(item => {
+        const el = document.createElement("span");
+        el.className = "not-rec-item";
+        el.title = `${item.grupo}: ${item.razon}`;
+        el.innerHTML = `<span class="not-rec-icon">${item.icon}</span><span class="not-rec-grupo">${item.grupo}</span><span class="not-rec-razon">${item.razon}</span>`;
+        notRecContainer.appendChild(el);
+      });
+      cardNotRec.classList.remove("hidden");
+    } else {
+      cardNotRec.classList.add("hidden");
+    }
+  }
+
   // Render ingredients list collapsible section
   const ingredientsSection = document.getElementById("ingredients-section");
   const ingredientsTextEl = document.getElementById("ingredients-text");
@@ -1312,6 +1379,29 @@ function runAICheck(product) {
         product.dietary.fairTradeSource = 'ai';
       }
       renderDietaryBadges(product);
+    }
+    // Merge AI notRecommended data (append any AI-discovered groups not already in OFF detection)
+    if (data.notRecommended && Array.isArray(data.notRecommended) && product.notRecommended) {
+      data.notRecommended.forEach(aiItem => {
+        if (!product.notRecommended.some(n => n.grupo === aiItem.grupo)) {
+          product.notRecommended.push({ icon: "🤖", grupo: aiItem.grupo, razon: aiItem.razon });
+        }
+      });
+      // Re-render not-recommended section
+      const cardNotRec = document.getElementById("card-not-recommended");
+      const notRecContainer = document.getElementById("not-recommended-container");
+      if (cardNotRec && notRecContainer) {
+        notRecContainer.innerHTML = "";
+        product.notRecommended.forEach(item => {
+          const el = document.createElement("span");
+          el.className = "not-rec-item";
+          el.title = `${item.grupo}: ${item.razon}`;
+          el.innerHTML = `<span class="not-rec-icon">${item.icon}</span><span class="not-rec-grupo">${item.grupo}</span><span class="not-rec-razon">${item.razon}</span>`;
+          notRecContainer.appendChild(el);
+        });
+        cardNotRec.classList.remove("hidden");
+      }
+    }
     }
 
     const missingData = product.gluten?.dataAvailable === false || product.allergensDataAvailable === false;

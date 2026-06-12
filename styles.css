@@ -1247,6 +1247,38 @@ body {
   color: var(--accent-primary);
 }
 
+/* No Recomendado Para */
+.not-rec-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 16px 8px;
+}
+.not-rec-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: var(--text-primary);
+  cursor: help;
+}
+.not-rec-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+.not-rec-grupo {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.not-rec-razon {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
 /* Collapsible Ingredients Section */
 .card-collapsible {
   padding: 0 !important;

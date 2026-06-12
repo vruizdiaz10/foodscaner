@@ -671,6 +671,10 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin explicaciones adicionales, 
     "palmOilFree": true,
     "fairTrade": true
   },
+  "notRecommended": [
+    {"grupo": "Niños", "razon": "Contiene edulcorantes y cafeína"},
+    {"grupo": "Embarazadas", "razon": "Contiene cafeína"}
+  ],
   "confidence": "alta/media/baja",
   "notes": "notas adicionales"
 }
@@ -688,7 +692,8 @@ REGLAS ESTRICTAS:
 - DIABETES: glycemicImpact debe estimar si el producto tiene índice glucémico bajo, medio o alto según ingredientes, presencia de fibra y tipo de carbohidratos.
 - DIABETES: Si no hay datos de azúcares ni carbohidratos, usa riesgo "bajo" con confidence "baja" y explain en notes.
 - No incluyas información de diabetes en el campo "notes" principal, úsala en "diabetes.notes".
-- DIETARY: Analiza cada campo basado en la lista de ingredientes: vegan (sin origen animal), vegetarian (sin carne/pescado), halal (sin cerdo/alcohol/gelatina), organic (ingredientes orgánicos), nonGmo (sin OGM), noAdditives (sin aditivos/preservantes artificiales), palmOilFree (sin aceite de palma), fairTrade (comercio justo, solo si el nombre o marca lo indica). Si no hay lista de ingredientes, usa confidence "baja" y basa tu respuesta en conocimiento general.`;
+- DIETARY: Analiza cada campo basado en la lista de ingredientes: vegan (sin origen animal), vegetarian (sin carne/pescado), halal (sin cerdo/alcohol/gelatina), organic (ingredientes orgánicos), nonGmo (sin OGM), noAdditives (sin aditivos/preservantes artificiales), palmOilFree (sin aceite de palma), fairTrade (comercio justo, solo si el nombre o marca lo indica). Si no hay lista de ingredientes, usa confidence "baja" y basa tu respuesta en conocimiento general.
+- NOTRECOMMENDED: Identifica grupos de población para los que este producto NO es recomendable según sus ingredientes. Ej: "Niños" si contiene edulcorantes o cafeína, "Embarazadas" si contiene cafeína o alcohol, "Fenilcetonúricos" si contiene aspartame. Incluye siempre una razón específica. Si no hay ingredientes, devuelve array vacío.`;
 
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
