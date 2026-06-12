@@ -370,13 +370,19 @@ function parseApiProduct(product) {
   const tracesText = (product.traces || "").toLowerCase();
   const allergensTags = (product.allergens_tags || []).map(t => t.toLowerCase());
 
-  const glutenKeywords = ["gluten", "trigo", "cebada", "centeno", "avena", "espelta", "kamut", "wheat", "barley", "rye", "oat", "spelt"];
+  // Oats (avena/oat) are not inherently gluten-containing; they may be cross-contaminated
+  // but certified gluten-free oats exist. Remove from keyword list to avoid false positives.
+  const glutenKeywords = ["gluten", "trigo", "cebada", "centeno", "espelta", "kamut", "wheat", "barley", "rye", "spelt"];
   const matchesGlutenInIngredients = glutenKeywords.some(keyword => ingredientsText.includes(keyword) || tracesText.includes(keyword));
   const hasGlutenAllergenTag = allergensTags.some(tag => tag.includes("gluten") || tag.includes("wheat") || tag.includes("trigo"));
-  
+
   // Check for positive labels indicating gluten-free
   const labelsTags = (product.labels_tags || []).map(t => t.toLowerCase());
   const isLabeledGlutenFree = labelsTags.some(tag => tag.includes("gluten-free") || tag.includes("sin-gluten") || tag.includes("libre-de-gluten"));
+
+  // Also check product name and ingredients text for explicit gluten-free claims
+  const productName = (product.product_name || "").toLowerCase();
+  const hasGlutenFreeClaim = /gluten\s*free|sin\s*gluten|libre\s*de\s*gluten/i.test(productName) || /gluten\s*free|sin\s*gluten|libre\s*de\s*gluten/i.test(ingredientsText);
 
   const glutenDataAvailable = !!(product.ingredients_text || (product.traces && product.traces !== "undefined") || (product.allergens_tags && product.allergens_tags.length > 0));
 
@@ -390,7 +396,7 @@ function parseApiProduct(product) {
     hasGluten = enrichedGluten.hasGluten;
     glutenDetails = enrichedGluten.details;
   } else if (glutenDataAvailable) {
-    if ((matchesGlutenInIngredients || hasGlutenAllergenTag) && !isLabeledGlutenFree) {
+    if ((matchesGlutenInIngredients || hasGlutenAllergenTag) && !isLabeledGlutenFree && !hasGlutenFreeClaim) {
       hasGluten = true;
       const detectedInIngredients = glutenKeywords.filter(k => ingredientsText.includes(k));
       glutenDetails = detectedInIngredients.length > 0 
@@ -398,6 +404,8 @@ function parseApiProduct(product) {
         : "Contiene gluten detectado";
     } else if (isLabeledGlutenFree) {
       glutenDetails = "Sin Gluten (Certificado)";
+    } else if (hasGlutenFreeClaim) {
+      glutenDetails = "Sin ingredientes con gluten detectados en la información declarada";
     }
   }
 
