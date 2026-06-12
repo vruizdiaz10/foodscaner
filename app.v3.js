@@ -379,6 +379,8 @@ function renderDietaryBadges(product) {
   const veganStatus = document.getElementById("dietary-vegan-status");
   const vegStatus = document.getElementById("dietary-vegetarian-status");
   const kosherStatus = document.getElementById("dietary-kosher-status");
+  const halalStatus = document.getElementById("dietary-halal-status");
+  const organicStatus = document.getElementById("dietary-organic-status");
   function setStatus(el, colorClass, text) {
     el.className = "dietary-status " + colorClass;
     el.textContent = text;
@@ -402,6 +404,16 @@ function renderDietaryBadges(product) {
     setStatus(kosherStatus, d.kosherSource === 'db' ? 'db-yes' : 'ai-yes', "Sí");
   } else {
     setStatus(kosherStatus, "unknown", "Sin Info");
+  }
+  if (d.halal === true) {
+    setStatus(halalStatus, d.halalSource === 'db' ? 'db-yes' : 'ai-yes', d.halalSource === 'db' ? "Sí" : "Probable");
+  } else {
+    setStatus(halalStatus, "unknown", "Sin Info");
+  }
+  if (d.organic === true) {
+    setStatus(organicStatus, d.organicSource === 'db' ? 'db-yes' : 'ai-yes', d.organicSource === 'db' ? "Sí" : "Probable");
+  } else {
+    setStatus(organicStatus, "unknown", "Sin Info");
   }
   dietaryBadges.classList.remove("hidden");
 }
@@ -735,8 +747,8 @@ function parseApiProduct(product) {
   const filteredAllergens = allergensList.filter(a => !isGlutenRelated(a));
   const filteredTraces = tracesList.filter(t => !isGlutenRelated(t));
 
-  // Dietary info (vegan, vegetarian, kosher) with source tracking
-  const dietary = { vegan: null, vegetarian: null, kosher: null, veganSource: null, vegetarianSource: null, kosherSource: null };
+  // Dietary info (vegan, vegetarian, kosher, halal, organic) with source tracking
+  const dietary = { vegan: null, vegetarian: null, kosher: null, halal: null, organic: null, veganSource: null, vegetarianSource: null, kosherSource: null, halalSource: null, organicSource: null };
   const analysisTags = (product.ingredients_analysis_tags || []).map(t => t.toLowerCase());
   if (labelsTags.some(t => t === 'en:vegan')) { dietary.vegan = true; dietary.veganSource = 'db'; }
   if (labelsTags.some(t => t === 'en:vegetarian')) { dietary.vegetarian = true; dietary.vegetarianSource = 'db'; }
@@ -744,6 +756,8 @@ function parseApiProduct(product) {
   if (analysisTags.includes('en:non-vegan')) { dietary.vegan = false; dietary.veganSource = 'db'; }
   if (analysisTags.includes('en:vegan') && dietary.vegan !== false) { dietary.vegan = true; dietary.veganSource = 'db'; }
   if (analysisTags.includes('en:vegetarian')) { dietary.vegetarian = true; dietary.vegetarianSource = 'db'; }
+  if (labelsTags.some(t => t === 'en:halal')) { dietary.halal = true; dietary.halalSource = 'db'; }
+  if (labelsTags.some(t => t === 'en:organic' || t === 'en:eu-organic' || t === 'en:usda-organic' || t === 'en:bio' || t === 'en:ab-agriculture-biologique' || t.includes('organic'))) { dietary.organic = true; dietary.organicSource = 'db'; }
 
   // Mexican warning seals (NOM-051 Fase 2)
   const sellos = [];
@@ -1207,6 +1221,14 @@ function runAICheck(product) {
       if (product.dietary.vegetarian === null && data.dietary.vegetarian !== undefined) {
         product.dietary.vegetarian = data.dietary.vegetarian;
         product.dietary.vegetarianSource = 'ai';
+      }
+      if (product.dietary.halal === null && data.dietary.halal !== undefined) {
+        product.dietary.halal = data.dietary.halal;
+        product.dietary.halalSource = 'ai';
+      }
+      if (product.dietary.organic === null && data.dietary.organic !== undefined) {
+        product.dietary.organic = data.dietary.organic;
+        product.dietary.organicSource = 'ai';
       }
       renderDietaryBadges(product);
     }

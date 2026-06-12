@@ -663,7 +663,9 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin explicaciones adicionales, 
   },
   "dietary": {
     "vegan": true,
-    "vegetarian": true
+    "vegetarian": true,
+    "halal": true,
+    "organic": true
   },
   "confidence": "alta/media/baja",
   "notes": "notas adicionales"
@@ -682,7 +684,7 @@ REGLAS ESTRICTAS:
 - DIABETES: glycemicImpact debe estimar si el producto tiene índice glucémico bajo, medio o alto según ingredientes, presencia de fibra y tipo de carbohidratos.
 - DIABETES: Si no hay datos de azúcares ni carbohidratos, usa riesgo "bajo" con confidence "baja" y explain en notes.
 - No incluyas información de diabetes en el campo "notes" principal, úsala en "diabetes.notes".
-- DIETARY: Analiza si el producto es vegano y/o vegetariano basado en la lista de ingredientes. vegan=true si no contiene ingredientes de origen animal (carne, pescado, lácteos, huevos, miel, etc.). vegetarian=true si no contiene carne/pescado pero puede tener lácteos/huevos. Si no hay lista de ingredientes, usa confidence "baja" y basa tu respuesta en el conocimiento general del producto.`;
+- DIETARY: Analiza si el producto es vegano, vegetariano, halal y/o orgánico basado en la lista de ingredientes. vegan=true si no contiene ingredientes de origen animal (carne, pescado, lácteos, huevos, miel, etc.). vegetarian=true si no contiene carne/pescado pero puede tener lácteos/huevos. halal=true si no contiene ingredientes prohibidos (cerdo, alcohol, gelatina de cerdo, etc.) y no hay alcohol en ingredientes. organic=true si los ingredientes parecen orgánicos o el nombre del producto indica orgánico. Si no hay lista de ingredientes, usa confidence "baja" y basa tu respuesta en el conocimiento general del producto.`;
 
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
