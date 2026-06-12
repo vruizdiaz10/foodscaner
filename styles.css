@@ -963,6 +963,10 @@ body {
   color: #64748b;
   border-color: rgba(100, 116, 139, 0.2);
 }
+.allergen-grid-item.safe .emoji {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
 .allergen-grid-item.safe .label {
   color: #64748b;
 }
