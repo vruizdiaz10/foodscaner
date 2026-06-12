@@ -25,7 +25,6 @@ const badgeNotVegan = document.getElementById("badge-not-vegan");
 const badgeVegetarian = document.getElementById("badge-vegetarian");
 const badgeKosher = document.getElementById("badge-kosher");
 const glutenStatus = document.getElementById("gluten-status");
-const cardGluten = document.getElementById("card-gluten");
 const caloriesVal = document.getElementById("calories-val");
 const caloriesProgress = document.getElementById("calories-progress");
 const caloriesLevel = document.getElementById("calories-level");
@@ -941,23 +940,7 @@ function renderProductData(product, barcode) {
   analysisGrid.classList.remove("hidden");
   noNutritionAlert.classList.add("hidden");
 
-  // Render Gluten Card details
-  glutenStatus.textContent = product.gluten.details;
-  cardGluten.className = "analysis-card full-width";
-  const gc = product.gluten.classification || "declared";
-  if (gc === "certified") {
-    glutenStatus.className = "status-value gluten-certified";
-    cardGluten.style.borderColor = "var(--accent-primary)";
-  } else if (gc === "declared") {
-    glutenStatus.className = "status-value gluten-declared";
-    cardGluten.style.borderColor = "var(--accent-alert)";
-  } else if (gc === "detected") {
-    glutenStatus.className = "status-value gluten-detected";
-    cardGluten.style.borderColor = "var(--accent-error)";
-  } else {
-    glutenStatus.className = "status-value gluten-unknown";
-    cardGluten.style.borderColor = "var(--text-muted)";
-  }
+  // Gluten card hidden (info shown in dietary table)
 
   // Render Calories Card details
   caloriesVal.querySelector(".number").textContent = product.calories.value;
