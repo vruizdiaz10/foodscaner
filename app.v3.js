@@ -20,7 +20,6 @@ const productImg = document.getElementById("product-img");
 const productName = document.getElementById("product-name");
 const productBrand = document.getElementById("product-brand");
 const productBarcode = document.getElementById("product-barcode");
-const dietaryBadges = document.getElementById("dietary-badges");
 const badgeVegan = document.getElementById("badge-vegan");
 const badgeNotVegan = document.getElementById("badge-not-vegan");
 const badgeVegetarian = document.getElementById("badge-vegetarian");
@@ -373,8 +372,9 @@ function isGlutenRelated(label) {
 }
 
 function renderDietaryBadges(product) {
+  const section = document.getElementById("dietary-section");
   const d = product.dietary;
-  if (!d) { dietaryBadges.classList.add("hidden"); return; }
+  if (!d) { if (section) section.classList.add("hidden"); return; }
   const g = product.gluten;
   const glutenStatus = document.getElementById("dietary-gluten-status");
   const veganStatus = document.getElementById("dietary-vegan-status");
@@ -382,9 +382,17 @@ function renderDietaryBadges(product) {
   const kosherStatus = document.getElementById("dietary-kosher-status");
   const halalStatus = document.getElementById("dietary-halal-status");
   const organicStatus = document.getElementById("dietary-organic-status");
+  const tooltips = {
+    "db-yes": "Confirmado por la base de datos",
+    "ai-yes": "Posible según ingredientes/IA",
+    "ai-no": "No detectado según ingredientes/IA",
+    "db-no": "Descartado por la base de datos",
+    unknown: "Sin información disponible"
+  };
   function setStatus(el, colorClass, text) {
     el.className = "dietary-status " + colorClass;
     el.textContent = text;
+    el.title = tooltips[colorClass] || "";
   }
   // Gluten row
   if (g) {
@@ -435,7 +443,7 @@ function renderDietaryBadges(product) {
   } else {
     setStatus(organicStatus, "unknown", "Sin Info");
   }
-  dietaryBadges.classList.remove("hidden");
+  if (section) section.classList.remove("hidden");
 }
 
 function parseApiProduct(product) {

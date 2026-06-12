@@ -202,33 +202,35 @@
               <h3 id="product-name">Nombre del Producto</h3>
               <p id="product-brand" class="brand-text">Marca del Producto</p>
               <p class="barcode-text">Cód: <span id="product-barcode">0000000000</span></p>
-              <div id="dietary-badges" class="dietary-table hidden">
-                <div class="dietary-row">
-                  <span id="dietary-gluten-attr" class="dietary-attr">🌾 Libre de Gluten</span>
-                  <span id="dietary-gluten-status" class="dietary-status unknown">Sin Info</span>
-                </div>
-                <div class="dietary-row">
-                  <span id="dietary-vegan-attr" class="dietary-attr">🌱 Vegano</span>
-                  <span id="dietary-vegan-status" class="dietary-status unknown">Sin Info</span>
-                </div>
-                <div class="dietary-row">
-                  <span id="dietary-vegetarian-attr" class="dietary-attr">🥦 Vegetariano</span>
-                  <span id="dietary-vegetarian-status" class="dietary-status unknown">Sin Info</span>
-                </div>
-                <div class="dietary-row">
-                  <span id="dietary-kosher-attr" class="dietary-attr">✡️ Kosher</span>
-                  <span id="dietary-kosher-status" class="dietary-status unknown">Sin Info</span>
-                </div>
-                <div class="dietary-row">
-                  <span id="dietary-halal-attr" class="dietary-attr">🌙 Halal</span>
-                  <span id="dietary-halal-status" class="dietary-status unknown">Sin Info</span>
-                </div>
-                <div class="dietary-row">
-                  <span id="dietary-organic-attr" class="dietary-attr">🌿 Orgánico</span>
-                  <span id="dietary-organic-status" class="dietary-status unknown">Sin Info</span>
-                </div>
+            </div>
+          </div>
+          <div id="dietary-section" class="dietary-section hidden">
+            <h4 class="dietary-title">Tipo de Dieta</h4>
+            <div id="dietary-badges" class="dietary-table">
+              <div class="dietary-row" title="Certificado libre de gluten por la base de datos o detectado por ingredientes/IA">
+                <span id="dietary-gluten-attr" class="dietary-attr">🌾 Libre de Gluten</span>
+                <span id="dietary-gluten-status" class="dietary-status unknown">Sin Info</span>
               </div>
-
+              <div class="dietary-row" title="Sin ingredientes de origen animal según base de datos o IA">
+                <span id="dietary-vegan-attr" class="dietary-attr">🌱 Vegano</span>
+                <span id="dietary-vegan-status" class="dietary-status unknown">Sin Info</span>
+              </div>
+              <div class="dietary-row" title="Sin carne/pescado según base de datos o IA">
+                <span id="dietary-vegetarian-attr" class="dietary-attr">🥦 Vegetariano</span>
+                <span id="dietary-vegetarian-status" class="dietary-status unknown">Sin Info</span>
+              </div>
+              <div class="dietary-row" title="Certificación kosher según base de datos">
+                <span id="dietary-kosher-attr" class="dietary-attr">✡️ Kosher</span>
+                <span id="dietary-kosher-status" class="dietary-status unknown">Sin Info</span>
+              </div>
+              <div class="dietary-row" title="Sin ingredientes prohibidos (cerdo, alcohol) según base de datos o IA">
+                <span id="dietary-halal-attr" class="dietary-attr">🌙 Halal</span>
+                <span id="dietary-halal-status" class="dietary-status unknown">Sin Info</span>
+              </div>
+              <div class="dietary-row" title="Ingredientes orgánicos certificados o detectados por IA">
+                <span id="dietary-organic-attr" class="dietary-attr">🌿 Orgánico</span>
+                <span id="dietary-organic-status" class="dietary-status unknown">Sin Info</span>
+              </div>
             </div>
           </div>
 

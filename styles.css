@@ -728,14 +728,31 @@ body {
   margin-left: 6px;
 }
 
+.dietary-section {
+  width: 100%;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-glass);
+}
+.dietary-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
 .dietary-table {
   display: table;
   width: 100%;
-  margin-top: 8px;
   border-collapse: collapse;
 }
 .dietary-row {
   display: table-row;
+  transition: background 0.15s;
+}
+.dietary-row:hover {
+  background: rgba(255,255,255,0.04);
 }
 .dietary-attr, .dietary-status {
   display: table-cell;
@@ -750,6 +767,7 @@ body {
 .dietary-status {
   text-align: right;
   font-weight: 600;
+  cursor: help;
 }
 .dietary-status.db-yes { color: #6ee7b7; }
 .dietary-status.ai-yes { color: #fde047; }
