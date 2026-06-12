@@ -202,11 +202,19 @@
               <h3 id="product-name">Nombre del Producto</h3>
               <p id="product-brand" class="brand-text">Marca del Producto</p>
               <p class="barcode-text">Cód: <span id="product-barcode">0000000000</span></p>
-              <div id="dietary-badges" class="dietary-badges hidden">
-                <span id="badge-vegan" class="dietary-badge badge-vegan hidden">🌱 Vegano</span>
-                <span id="badge-not-vegan" class="dietary-badge badge-not-vegan hidden">❌ No vegano</span>
-                <span id="badge-vegetarian" class="dietary-badge badge-vegetarian hidden">🥦 Vegetariano</span>
-                <span id="badge-kosher" class="dietary-badge badge-kosher hidden">✡️ Kosher</span>
+              <div id="dietary-badges" class="dietary-table hidden">
+                <div class="dietary-row">
+                  <span id="dietary-vegan-attr" class="dietary-attr">🌱 Vegano</span>
+                  <span id="dietary-vegan-status" class="dietary-status unknown">Sin Info</span>
+                </div>
+                <div class="dietary-row">
+                  <span id="dietary-vegetarian-attr" class="dietary-attr">🥦 Vegetariano</span>
+                  <span id="dietary-vegetarian-status" class="dietary-status unknown">Sin Info</span>
+                </div>
+                <div class="dietary-row">
+                  <span id="dietary-kosher-attr" class="dietary-attr">✡️ Kosher</span>
+                  <span id="dietary-kosher-status" class="dietary-status unknown">Sin Info</span>
+                </div>
               </div>
 
             </div>

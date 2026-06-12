@@ -374,50 +374,36 @@ function isGlutenRelated(label) {
 
 function renderDietaryBadges(product) {
   const d = product.dietary;
-  const legend = document.getElementById("dietary-legend");
-  if (!d) {
-    dietaryBadges.classList.add("hidden");
-    if (legend) legend.classList.add("hidden");
-    return;
+  if (!d) { dietaryBadges.classList.add("hidden"); return; }
+  const veganAttr = document.getElementById("dietary-vegan-attr");
+  const veganStatus = document.getElementById("dietary-vegan-status");
+  const vegStatus = document.getElementById("dietary-vegetarian-status");
+  const kosherStatus = document.getElementById("dietary-kosher-status");
+  function setStatus(el, colorClass, text) {
+    el.className = "dietary-status " + colorClass;
+    el.textContent = text;
   }
-  function setBadge(el, colorClass, statusText) {
-    el.className = "dietary-badge " + colorClass;
-    const icon = el.dataset.icon || "";
-    const label = el.dataset.label || el.textContent.trim();
-    el.innerHTML = icon ? icon + " " + label + " · " + statusText : label + " · " + statusText;
-    el.classList.remove("hidden");
-  }
-  badgeVegan.dataset.icon = "🌱";
-  badgeVegan.dataset.label = "Vegano";
-  badgeNotVegan.dataset.icon = "❌";
-  badgeNotVegan.dataset.label = "No vegano";
-  badgeVegetarian.dataset.icon = "🥦";
-  badgeVegetarian.dataset.label = "Vegetariano";
-  badgeKosher.dataset.icon = "✡️";
-  badgeKosher.dataset.label = "Kosher";
-
   if (d.vegan === true) {
-    setBadge(badgeVegan, "badge-" + (d.veganSource === 'db' ? 'db-yes' : 'ai-yes'), d.veganSource === 'db' ? "Sí" : "Probable");
-    badgeNotVegan.classList.add("hidden");
+    veganAttr.textContent = "🌱 Vegano";
+    setStatus(veganStatus, d.veganSource === 'db' ? 'db-yes' : 'ai-yes', d.veganSource === 'db' ? "Sí" : "Probable");
   } else if (d.vegan === false) {
-    setBadge(badgeNotVegan, "badge-" + (d.veganSource === 'db' ? 'db-no' : 'ai-no'), d.veganSource === 'db' ? "No" : "Probable No");
-    badgeVegan.classList.add("hidden");
+    veganAttr.textContent = "❌ No vegano";
+    setStatus(veganStatus, d.veganSource === 'db' ? 'db-no' : 'ai-no', d.veganSource === 'db' ? "No" : "Probable No");
   } else {
-    setBadge(badgeVegan, "badge-unknown", "Sin Info");
-    badgeNotVegan.classList.add("hidden");
+    veganAttr.textContent = "🌱 Vegano";
+    setStatus(veganStatus, "unknown", "Sin Info");
   }
   if (d.vegetarian === true) {
-    setBadge(badgeVegetarian, "badge-" + (d.vegetarianSource === 'db' ? 'db-yes' : 'ai-yes'), d.vegetarianSource === 'db' ? "Sí" : "Probable");
+    setStatus(vegStatus, d.vegetarianSource === 'db' ? 'db-yes' : 'ai-yes', d.vegetarianSource === 'db' ? "Sí" : "Probable");
   } else {
-    setBadge(badgeVegetarian, "badge-unknown", "Sin Info");
+    setStatus(vegStatus, "unknown", "Sin Info");
   }
   if (d.kosher === true) {
-    setBadge(badgeKosher, "badge-" + (d.kosherSource === 'db' ? 'db-yes' : 'ai-yes'), "Sí");
+    setStatus(kosherStatus, d.kosherSource === 'db' ? 'db-yes' : 'ai-yes', "Sí");
   } else {
-    setBadge(badgeKosher, "badge-unknown", "Sin Info");
+    setStatus(kosherStatus, "unknown", "Sin Info");
   }
   dietaryBadges.classList.remove("hidden");
-  if (legend) legend.classList.add("hidden");
 }
 
 function parseApiProduct(product) {
