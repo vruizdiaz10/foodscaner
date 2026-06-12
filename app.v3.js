@@ -374,7 +374,12 @@ function isGlutenRelated(label) {
 
 function renderDietaryBadges(product) {
   const d = product.dietary;
-  if (!d) { dietaryBadges.classList.add("hidden"); return; }
+  if (!d) {
+    dietaryBadges.classList.add("hidden");
+    const legend = document.getElementById("dietary-legend");
+    if (legend) legend.classList.add("hidden");
+    return;
+  }
   // Helper: set color class on badge element
   function setBadge(el, colorClass) {
     el.className = "dietary-badge " + colorClass;
@@ -401,6 +406,8 @@ function renderDietaryBadges(product) {
     setBadge(badgeKosher, "badge-unknown");
   }
   dietaryBadges.classList.remove("hidden");
+  const legend = document.getElementById("dietary-legend");
+  if (legend) legend.classList.remove("hidden");
 }
 
 function parseApiProduct(product) {
