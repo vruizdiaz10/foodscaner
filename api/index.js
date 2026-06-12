@@ -471,6 +471,33 @@ app.get('/api/product/:barcode', async (req, res) => {
       }
     }
 
+    async function identifyViaGroq(barcode) {
+      const prompt = `Eres un experto en identificación de productos por código de barras. El código de barras es: ${barcode}. Basado en tu conocimiento, responde ÚNICAMENTE con un objeto JSON válido sin explicaciones: { "name": "nombre del producto", "brand": "marca", "known": true }. Si NO conoces el producto, responde: { "name": "", "brand": "", "known": false }.`;
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 10000);
+      try {
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: prompt }], temperature: 0.1, max_tokens: 150 }),
+          signal: ctrl.signal
+        });
+        clearTimeout(t);
+        if (response.ok) {
+          const data = await response.json();
+          const content = data.choices?.[0]?.message?.content || "";
+          const match = content.match(/\{.*\}/s);
+          if (match) {
+            const parsed = JSON.parse(match[0]);
+            if (parsed.known && parsed.name && parsed.name !== "Producto") return parsed;
+          }
+        }
+      } catch (e) {
+        clearTimeout(t);
+      }
+      return null;
+    }
+
     // Enrichment: buscar por nombre en USDA si OFF/UPCItemDb/GTINHub tiene nombre pero faltan datos
     if (bestResult) {
       const p = bestResult.product;
@@ -489,9 +516,7 @@ app.get('/api/product/:barcode', async (req, res) => {
           }
           if (!p.ingredients_text && enrichment.ingredientsText) {
             p.ingredients_text = enrichment.ingredientsText;
-            if (enrichment.gluten.hasGluten) {
-              p._gluten_enriched = enrichment.gluten;
-            }
+            p._gluten_enriched = enrichment.gluten;
           }
           p._enrichedFrom = "USDA (por nombre)";
         }
@@ -517,6 +542,25 @@ app.get('/api/product/:barcode', async (req, res) => {
       const respData = { ...fallbackResult, sourceResults };
       setCacheEntry(barcode, respData, "UpcItemDb", null);
       return res.json(respData);
+    }
+
+    // Último recurso: identificar vía Groq + USDA
+    sourceResults.push({ source: "Groq (IA)", found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
+    const groqId = await identifyViaGroq(barcode);
+    if (groqId) {
+      sourceResults[sourceResults.length - 1] = { source: "Groq (IA)", found: true, productName: groqId.name, brandName: groqId.brand, allergenInfo: "Consultando USDA...", nutritionInfo: "Consultando USDA..." };
+      const enrichment = await enrichFromUSDA(groqId.name, groqId.brand);
+      if (enrichment) {
+        const gp = {
+          name: groqId.name, brand: groqId.brand, image: "", isFood: true,
+          category: "Comida / Bebida (Identificado por IA)",
+          gluten: enrichment.gluten, calories: enrichment.calories,
+          allergens: enrichment.allergens, nutriscore: "-", isFromFallback: true, _enrichedFrom: "USDA (IA + nombre)"
+        };
+        const respData = { status: 1, source: 'local', sourceLabel: 'Groq + USDA', product: gp, sourceResults };
+        setCacheEntry(barcode, respData, "Groq+USDA", null);
+        return res.json(respData);
+      }
     }
 
     return res.status(404).json({ status: 0, message: "Producto no encontrado", sourceResults });
