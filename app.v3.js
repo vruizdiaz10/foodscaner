@@ -372,6 +372,37 @@ function isGlutenRelated(label) {
   return ["gluten", "trigo", "trigo (gluten)", "cebada", "centeno", "avena"].includes(l) || l.includes("(gluten)");
 }
 
+function renderDietaryBadges(product) {
+  const d = product.dietary;
+  if (!d) { dietaryBadges.classList.add("hidden"); return; }
+  // Helper: set color class on badge element
+  function setBadge(el, colorClass) {
+    el.className = "dietary-badge " + colorClass;
+    el.classList.remove("hidden");
+  }
+  if (d.vegan === true) {
+    setBadge(badgeVegan, "badge-" + (d.veganSource === 'db' ? 'db-yes' : 'ai-yes'));
+    badgeNotVegan.classList.add("hidden");
+  } else if (d.vegan === false) {
+    setBadge(badgeNotVegan, "badge-" + (d.veganSource === 'db' ? 'db-no' : 'ai-no'));
+    badgeVegan.classList.add("hidden");
+  } else {
+    setBadge(badgeVegan, "badge-unknown");
+    badgeNotVegan.classList.add("hidden");
+  }
+  if (d.vegetarian === true) {
+    setBadge(badgeVegetarian, "badge-" + (d.vegetarianSource === 'db' ? 'db-yes' : 'ai-yes'));
+  } else {
+    setBadge(badgeVegetarian, "badge-unknown");
+  }
+  if (d.kosher === true) {
+    setBadge(badgeKosher, "badge-" + (d.kosherSource === 'db' ? 'db-yes' : 'ai-yes'));
+  } else {
+    setBadge(badgeKosher, "badge-unknown");
+  }
+  dietaryBadges.classList.remove("hidden");
+}
+
 function parseApiProduct(product) {
   const name = product.product_name || product.product_name_es || "Producto Desconocido";
   const brand = product.brands || "Marca genérica";
@@ -701,15 +732,15 @@ function parseApiProduct(product) {
   const filteredAllergens = allergensList.filter(a => !isGlutenRelated(a));
   const filteredTraces = tracesList.filter(t => !isGlutenRelated(t));
 
-  // Dietary info (vegan, vegetarian, kosher)
-  const dietary = { vegan: null, vegetarian: null, kosher: null };
+  // Dietary info (vegan, vegetarian, kosher) with source tracking
+  const dietary = { vegan: null, vegetarian: null, kosher: null, veganSource: null, vegetarianSource: null, kosherSource: null };
   const analysisTags = (product.ingredients_analysis_tags || []).map(t => t.toLowerCase());
-  if (labelsTags.some(t => t === 'en:vegan')) dietary.vegan = true;
-  if (labelsTags.some(t => t === 'en:vegetarian')) dietary.vegetarian = true;
-  if (labelsTags.some(t => t.includes('kosher'))) dietary.kosher = true;
-  if (analysisTags.includes('en:non-vegan')) dietary.vegan = false;
-  if (analysisTags.includes('en:vegan') && dietary.vegan !== false) dietary.vegan = true;
-  if (analysisTags.includes('en:vegetarian')) dietary.vegetarian = true;
+  if (labelsTags.some(t => t === 'en:vegan')) { dietary.vegan = true; dietary.veganSource = 'db'; }
+  if (labelsTags.some(t => t === 'en:vegetarian')) { dietary.vegetarian = true; dietary.vegetarianSource = 'db'; }
+  if (labelsTags.some(t => t.includes('kosher'))) { dietary.kosher = true; dietary.kosherSource = 'db'; }
+  if (analysisTags.includes('en:non-vegan')) { dietary.vegan = false; dietary.veganSource = 'db'; }
+  if (analysisTags.includes('en:vegan') && dietary.vegan !== false) { dietary.vegan = true; dietary.veganSource = 'db'; }
+  if (analysisTags.includes('en:vegetarian')) { dietary.vegetarian = true; dietary.vegetarianSource = 'db'; }
 
   // Mexican warning seals (NOM-051 Fase 2)
   const sellos = [];
@@ -828,17 +859,7 @@ function renderProductData(product, barcode) {
   
   productBarcode.textContent = barcode;
 
-  // Render dietary badges (vegan, vegetarian, kosher)
-  if (product.dietary) {
-    const d = product.dietary;
-    badgeVegan.classList.toggle("hidden", d.vegan !== true);
-    badgeNotVegan.classList.toggle("hidden", d.vegan !== false);
-    badgeVegetarian.classList.toggle("hidden", d.vegetarian !== true);
-    badgeKosher.classList.toggle("hidden", d.kosher !== true);
-    dietaryBadges.classList.toggle("hidden", !d.vegan && !d.vegetarian && !d.kosher);
-  } else {
-    dietaryBadges.classList.add("hidden");
-  }
+  renderDietaryBadges(product);
 
   if (product.image) {
     productImg.src = product.image;
@@ -1178,17 +1199,13 @@ function runAICheck(product) {
     if (data.dietary && product.dietary) {
       if (product.dietary.vegan === null && data.dietary.vegan !== undefined) {
         product.dietary.vegan = data.dietary.vegan;
+        product.dietary.veganSource = 'ai';
       }
       if (product.dietary.vegetarian === null && data.dietary.vegetarian !== undefined) {
         product.dietary.vegetarian = data.dietary.vegetarian;
+        product.dietary.vegetarianSource = 'ai';
       }
-      // Re-render dietary badges
-      const d = product.dietary;
-      badgeVegan.classList.toggle("hidden", d.vegan !== true);
-      badgeNotVegan.classList.toggle("hidden", d.vegan !== false);
-      badgeVegetarian.classList.toggle("hidden", d.vegetarian !== true);
-      badgeKosher.classList.toggle("hidden", product.dietary.kosher !== true);
-      dietaryBadges.classList.toggle("hidden", !d.vegan && !d.vegetarian && !d.kosher);
+      renderDietaryBadges(product);
     }
 
     const missingData = product.gluten?.dataAvailable === false || product.allergensDataAvailable === false;

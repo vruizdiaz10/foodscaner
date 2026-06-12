@@ -745,26 +745,35 @@ body {
   font-weight: 500;
 }
 
-.badge-vegan {
+.badge-db-yes {
   background: rgba(16, 185, 129, 0.15);
   color: #6ee7b7;
   border: 1px solid rgba(16, 185, 129, 0.4);
 }
 
-.badge-not-vegan {
+.badge-ai-yes {
+  background: rgba(234, 179, 8, 0.15);
+  color: #fde047;
+  border: 1px solid rgba(234, 179, 8, 0.4);
+}
+
+.badge-ai-no {
+  background: rgba(249, 115, 22, 0.15);
+  color: #fdba74;
+  border: 1px solid rgba(249, 115, 22, 0.4);
+}
+
+.badge-db-no {
   background: rgba(239, 68, 68, 0.12);
   color: #fca5a5;
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
-.badge-vegetarian {
-  background: rgba(52, 211, 153, 0.12);
-  color: #6ee7b7;
-  border: 1px solid rgba(52, 211, 153, 0.3);
+.badge-unknown {
+  background: rgba(107, 114, 128, 0.15);
+  color: #9ca3af;
+  border: 1px solid rgba(107, 114, 128, 0.3);
 }
-
-.badge-kosher {
-  background: rgba(96, 165, 250, 0.15);
   color: #93c5fd;
   border: 1px solid rgba(96, 165, 250, 0.4);
 }
