@@ -1161,7 +1161,8 @@ function runAICheck(product) {
       sugars: product.sugars?.value ?? null,
       carbohydrates: product.carbohydrates?.value ?? null,
       fiber: product.carbohydrates?.fiber ?? null,
-      isBeverage: product.isBeverage ?? null
+      isBeverage: product.isBeverage ?? null,
+      dietary: product.dietary ?? null
     })
   })
   .then(r => r.json())
@@ -1171,6 +1172,23 @@ function runAICheck(product) {
       error.textContent = "Error: " + (data.details || data.error);
       error.classList.remove("hidden");
       return;
+    }
+
+    // Merge AI dietary data with OFF data (AI fills gaps when OFF is null)
+    if (data.dietary && product.dietary) {
+      if (product.dietary.vegan === null && data.dietary.vegan !== undefined) {
+        product.dietary.vegan = data.dietary.vegan;
+      }
+      if (product.dietary.vegetarian === null && data.dietary.vegetarian !== undefined) {
+        product.dietary.vegetarian = data.dietary.vegetarian;
+      }
+      // Re-render dietary badges
+      const d = product.dietary;
+      badgeVegan.classList.toggle("hidden", d.vegan !== true);
+      badgeNotVegan.classList.toggle("hidden", d.vegan !== false);
+      badgeVegetarian.classList.toggle("hidden", d.vegetarian !== true);
+      badgeKosher.classList.toggle("hidden", product.dietary.kosher !== true);
+      dietaryBadges.classList.toggle("hidden", !d.vegan && !d.vegetarian && !d.kosher);
     }
 
     const missingData = product.gluten?.dataAvailable === false || product.allergensDataAvailable === false;

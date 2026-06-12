@@ -629,7 +629,7 @@ app.post('/api/product', (req, res) => {
 });
 
 app.post('/api/ai-query', async (req, res) => {
-  const { name, brand, ingredients, allergens, sugars, carbohydrates, fiber, isBeverage } = req.body;
+  const { name, brand, ingredients, allergens, sugars, carbohydrates, fiber, isBeverage, dietary } = req.body;
   if (!name) return res.status(400).json({ error: "Nombre del producto requerido" });
 
   let nutritionStr = '';
@@ -661,6 +661,10 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin explicaciones adicionales, 
     "glycemicImpact": "bajo",
     "notes": "Explicación breve basada en azúcares, carbohidratos, fibra e ingredientes"
   },
+  "dietary": {
+    "vegan": true,
+    "vegetarian": true
+  },
   "confidence": "alta/media/baja",
   "notes": "notas adicionales"
 }
@@ -677,7 +681,8 @@ REGLAS ESTRICTAS:
 - DIABETES: risk debe ser "bajo", "medio" o "alto" según la cantidad de azúcares por 100g, carbohidratos totales, y fibra (la fibra mitiga el impacto). Usa las tablas de referencia de la OMS: bajo ≤5g sólidos / ≤2.5g bebidas, alto >22.5g sólidos / >11.25g bebidas.
 - DIABETES: glycemicImpact debe estimar si el producto tiene índice glucémico bajo, medio o alto según ingredientes, presencia de fibra y tipo de carbohidratos.
 - DIABETES: Si no hay datos de azúcares ni carbohidratos, usa riesgo "bajo" con confidence "baja" y explain en notes.
-- No incluyas información de diabetes en el campo "notes" principal, úsala en "diabetes.notes".`;
+- No incluyas información de diabetes en el campo "notes" principal, úsala en "diabetes.notes".
+- DIETARY: Analiza si el producto es vegano y/o vegetariano basado en la lista de ingredientes. vegan=true si no contiene ingredientes de origen animal (carne, pescado, lácteos, huevos, miel, etc.). vegetarian=true si no contiene carne/pescado pero puede tener lácteos/huevos. Si no hay lista de ingredientes, usa confidence "baja" y basa tu respuesta en el conocimiento general del producto.`;
 
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
