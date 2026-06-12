@@ -987,6 +987,30 @@ body {
   color: #fcd34d;
 }
 
+.allergen-legend {
+  display: flex;
+  gap: 14px;
+  margin-top: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.dot-gray { background: #64748b; }
+.dot-red { background: #fca5a5; }
+.dot-yellow { background: #fcd34d; }
+
 .safe-msg {
   color: var(--accent-primary);
   font-weight: 600;
