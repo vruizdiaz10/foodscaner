@@ -56,6 +56,16 @@ const COMMON_ALLERGENS = [
   { emoji: "🫘", label: "Soja", match: ["soja", "soya", "soy", "soybean"] }
 ];
 
+const EXTRA_ALLERGEN_ICONS = {
+  "mostaza": "🫙", "mustard": "🫙",
+  "sésamo": "🌱", "sesamo": "🌱", "sesame": "🌱",
+  "sulfito": "🧪", "sulfite": "🧪", "sulphur": "🧪",
+  "crustáceo": "🦀", "crustacean": "🦀",
+  "molusco": "🐚", "mollusc": "🐚",
+  "altramuz": "🌸", "lupin": "🌸",
+  "apio": "🥬", "celery": "🥬"
+};
+
 // Application Scanner State
 let html5QrCode = null;
 let isScanning = false;
@@ -781,12 +791,11 @@ function renderProductData(product, barcode) {
   if (extraAllergens.length > 0) {
     allergensSafeMsg.classList.add("hidden");
     extraAllergens.forEach(allergen => {
+      const iconKey = Object.keys(EXTRA_ALLERGEN_ICONS).find(k => allergen.toLowerCase().includes(k));
+      const icon = iconKey ? EXTRA_ALLERGEN_ICONS[iconKey] : "⚠️";
       const tag = document.createElement("span");
       tag.className = "allergen-tag";
-      tag.innerHTML = `
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px; height:12px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        ${allergen}
-      `;
+      tag.innerHTML = `${icon} ${allergen}`;
       allergensList.appendChild(tag);
     });
     allergensList.classList.remove("hidden");
