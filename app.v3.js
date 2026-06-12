@@ -391,20 +391,25 @@ function parseApiProduct(product) {
 
   let hasGluten = false;
   let glutenDetails = (glutenDataAvailable || enrichedGluten) ? "Sin ingredientes con gluten detectados en la información declarada" : "Sin información de gluten";
+  let glutenClassification = !glutenDataAvailable && !enrichedGluten ? "no_info" : "declared";
 
   if (enrichedGluten) {
     hasGluten = enrichedGluten.hasGluten;
     glutenDetails = enrichedGluten.details;
+    glutenClassification = "declared";
   } else if (glutenDataAvailable) {
     if ((matchesGlutenInIngredients || hasGlutenAllergenTag) && !isLabeledGlutenFree && !hasGlutenFreeClaim) {
       hasGluten = true;
+      glutenClassification = hasGlutenAllergenTag ? "declared" : "detected";
       const detectedInIngredients = glutenKeywords.filter(k => ingredientsText.includes(k));
       glutenDetails = detectedInIngredients.length > 0 
         ? `Contiene gluten (${detectedInIngredients.join(", ")})` 
         : "Contiene gluten detectado";
     } else if (isLabeledGlutenFree) {
+      glutenClassification = "certified";
       glutenDetails = "Sin Gluten (Certificado)";
     } else if (hasGlutenFreeClaim) {
+      glutenClassification = "declared";
       glutenDetails = "Sin ingredientes con gluten detectados en la información declarada";
     }
   }
@@ -615,7 +620,8 @@ function parseApiProduct(product) {
     gluten: {
       hasGluten,
       details: glutenDetails,
-      dataAvailable: glutenDataAvailable
+      dataAvailable: glutenDataAvailable,
+      classification: glutenClassification
     },
     calories: {
       value: Math.round(kcal),
@@ -688,15 +694,19 @@ function renderProductData(product, barcode) {
   // Render Gluten Card details
   glutenStatus.textContent = product.gluten.details;
   cardGluten.className = "analysis-card";
-  if (product.gluten.hasGluten) {
-    glutenStatus.className = "status-value gluten-contains";
+  const gc = product.gluten.classification || "declared";
+  if (gc === "certified") {
+    glutenStatus.className = "status-value gluten-certified";
+    cardGluten.style.borderColor = "var(--accent-primary)";
+  } else if (gc === "declared") {
+    glutenStatus.className = "status-value gluten-declared";
+    cardGluten.style.borderColor = product.gluten.hasGluten ? "var(--accent-alert)" : "var(--accent-primary)";
+  } else if (gc === "detected") {
+    glutenStatus.className = "status-value gluten-detected";
     cardGluten.style.borderColor = "var(--accent-alert)";
-  } else if (product.gluten.dataAvailable === false) {
+  } else {
     glutenStatus.className = "status-value gluten-unknown";
     cardGluten.style.borderColor = "var(--text-muted)";
-  } else {
-    glutenStatus.className = "status-value gluten-safe";
-    cardGluten.style.borderColor = "var(--accent-primary)";
   }
 
   // Render Calories Card details

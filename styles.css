@@ -842,14 +842,17 @@ body {
 
 /* Specific Card Rules */
 /* Gluten Safe vs Gluten Contains */
-.gluten-safe {
-  color: #10b981; /* Green */
+.gluten-certified {
+  color: #10b981; /* Green - max confidence */
 }
-.gluten-contains {
-  color: #f59e0b; /* Amber */
+.gluten-declared {
+  color: #10b981; /* Green/high confidence (amber if hasGluten set via JS) */
+}
+.gluten-detected {
+  color: #f59e0b; /* Amber - medium confidence */
 }
 .gluten-unknown {
-  color: #94a3b8; /* Slate-400 */
+  color: #94a3b8; /* Slate-400 - no info */
 }
 
 
