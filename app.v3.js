@@ -759,6 +759,7 @@ function renderProductData(product, barcode) {
 
   // Render Allergen Icon Grid + text tags
   const gridEl = document.getElementById("allergen-icon-grid");
+  let anyGridActive = false;
   if (gridEl) {
     gridEl.innerHTML = "";
     const allAllergensLower = (product.allergens || []).map(a => a.toLowerCase());
@@ -771,8 +772,10 @@ function renderProductData(product, barcode) {
       const matchesGluten = item.checkGluten && product.gluten && product.gluten.hasGluten;
       if (matchesAllergen || matchesGluten) {
         div.classList.add("detected");
+        anyGridActive = true;
       } else if (matchesTrace) {
         div.classList.add("traces");
+        anyGridActive = true;
       } else {
         div.classList.add("safe");
       }
@@ -799,6 +802,9 @@ function renderProductData(product, barcode) {
       allergensList.appendChild(tag);
     });
     allergensList.classList.remove("hidden");
+  } else if (anyGridActive) {
+    allergensSafeMsg.classList.add("hidden");
+    allergensList.classList.add("hidden");
   } else if (product.allergensDataAvailable === false) {
     allergensSafeMsg.classList.remove("hidden");
     allergensSafeMsg.textContent = "Información no disponible (Requiere verificar el empaque)";
@@ -811,19 +817,28 @@ function renderProductData(product, barcode) {
     allergensList.classList.add("hidden");
   }
 
-  // Render traces (may contain)
+  // Render traces (may contain) — only traces NOT already in the icon grid
   const tracesSection = document.getElementById("traces-section");
   const tracesContainer = document.getElementById("traces-list");
   if (tracesSection && tracesContainer) {
     tracesContainer.innerHTML = "";
     if (product.traces && product.traces.length > 0) {
-      product.traces.forEach(t => {
-        const tag = document.createElement("span");
-        tag.className = "allergen-tag traces-tag";
-        tag.textContent = t;
-        tracesContainer.appendChild(tag);
+      const gridMatchLabels = COMMON_ALLERGENS.flatMap(i => i.match);
+      const uniqueTraces = product.traces.filter(t => {
+        const tl = t.toLowerCase();
+        return !gridMatchLabels.some(m => tl.includes(m));
       });
-      tracesSection.classList.remove("hidden");
+      if (uniqueTraces.length > 0) {
+        uniqueTraces.forEach(t => {
+          const tag = document.createElement("span");
+          tag.className = "allergen-tag traces-tag";
+          tag.textContent = t;
+          tracesContainer.appendChild(tag);
+        });
+        tracesSection.classList.remove("hidden");
+      } else {
+        tracesSection.classList.add("hidden");
+      }
     } else {
       tracesSection.classList.add("hidden");
     }
