@@ -421,6 +421,8 @@ app.get('/api/product/:barcode', async (req, res) => {
         } else {
           sourceResults.push({ source: "UpcItemDb", found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
         }
+      } else {
+        sourceResults.push({ source: "UpcItemDb", found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
       }
     } catch (error) {
       clearTimeout(upcTimeout);
@@ -460,6 +462,8 @@ app.get('/api/product/:barcode', async (req, res) => {
           } else {
             sourceResults.push({ source: "GTINHub", found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
           }
+        } else {
+          sourceResults.push({ source: "GTINHub", found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
         }
       } catch (error) {
         clearTimeout(gtinTimeout);
