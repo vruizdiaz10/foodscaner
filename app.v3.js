@@ -1444,6 +1444,95 @@ function runAICheck(product) {
       }
     }
 
+    // Merge AI allergens into the main allergens section (with visual indicator)
+    if (data.allergens && Array.isArray(data.allergens)) {
+      const allKnown = [
+        ...(product.allergens || []),
+        ...(product.traces || [])
+      ].map(a => a.toLowerCase().trim());
+      const aiAll = data.allergens.filter(a => !isGlutenRelated(a)).map(a => a.toLowerCase().trim());
+      const canonical = (s) => { const m = { "soya": "soja", "mani": "cacahuate", "cacahuete": "cacahuate", "lácteos": "leche" }; return m[s] || s; };
+      const allWords = (s) => s.replace(/[^a-záéíóúñ]/g, " ").split(/\s+/).filter(w => w.length > 2);
+      const matchesKnown = (a) => {
+        const ca = canonical(a);
+        const stripParen = (s) => s.replace(/\s*\(.*?\)\s*/g, "").trim();
+        if (allKnown.some(k => canonical(stripParen(k)) === stripParen(ca))) return true;
+        const wa = allWords(ca);
+        return allKnown.some(k => { const wk = allWords(k); return wa.some(w => wk.includes(w)); });
+      };
+      const aiOnly = aiAll.filter(a => !matchesKnown(a));
+      if (aiOnly.length > 0) {
+        product.aiAllergens = aiOnly;
+
+        const gridEl = document.getElementById("allergen-icon-grid");
+
+        // Si no había datos declarados, poblar el grid con items seguros
+        if (product.allergensDataAvailable === false) {
+          const legendEl = document.querySelector(".allergen-legend");
+          if (gridEl) {
+            gridEl.classList.remove("hidden");
+            gridEl.innerHTML = "";
+            COMMON_ALLERGENS.forEach(item => {
+              const div = document.createElement("div");
+              div.className = "allergen-grid-item safe";
+              div.innerHTML = `<span class="emoji">${item.emoji}</span><span class="label">${item.label}</span>`;
+              gridEl.appendChild(div);
+            });
+          }
+          if (legendEl) legendEl.classList.remove("hidden");
+        }
+
+        // Actualizar icon grid: items seguros que AI sugiere → ai-suggested
+        if (gridEl) {
+          COMMON_ALLERGENS.forEach(item => {
+            const matchesAI = item.match.some(m => aiOnly.some(a => a.includes(m)));
+            if (matchesAI) {
+              const divs = gridEl.querySelectorAll(".allergen-grid-item");
+              divs.forEach(div => {
+                const label = div.querySelector(".label");
+                if (label && item.match.some(m => label.textContent.toLowerCase().includes(m))) {
+                  if (div.classList.contains("safe")) {
+                    div.classList.remove("safe");
+                    div.classList.add("ai-suggested");
+                    const badge = document.createElement("span");
+                    badge.className = "ai-badge";
+                    badge.textContent = "🤖";
+                    div.appendChild(badge);
+                  }
+                }
+              });
+            }
+          });
+        }
+
+        // Agregar badge IA a la leyenda si no existe
+        const legendEl = document.querySelector(".allergen-legend");
+        if (legendEl && !legendEl.querySelector(".legend-item-ai")) {
+          const aiLegend = document.createElement("span");
+          aiLegend.className = "legend-item legend-item-ai";
+          aiLegend.innerHTML = '<span class="dot dot-purple"></span> Sugerido por IA';
+          legendEl.appendChild(aiLegend);
+        }
+
+        // Text tags para alérgenos no comunes sugeridos por IA
+        const knownMatchLabels = COMMON_ALLERGENS.flatMap(i => i.match);
+        const extraAI = aiOnly.filter(a => !knownMatchLabels.some(m => a.includes(m)));
+        if (extraAI.length > 0) {
+          allergensSafeMsg.classList.add("hidden");
+          extraAI.forEach(allergen => {
+            const iconKey = Object.keys(EXTRA_ALLERGEN_ICONS).find(k => allergen.includes(k));
+            const icon = iconKey ? EXTRA_ALLERGEN_ICONS[iconKey] : "🤖";
+            const tag = document.createElement("span");
+            tag.className = "allergen-tag ai-suggested";
+            tag.innerHTML = `${icon} ${allergen}`;
+            tag.title = "Sugerido por análisis de IA";
+            allergensList.appendChild(tag);
+          });
+          allergensList.classList.remove("hidden");
+        }
+      }
+    }
+
     const missingData = product.gluten?.dataAvailable === false || product.allergensDataAvailable === false;
     if (product.isFromFallback || missingData) {
       // Override AI gluten if product is certified or claims GF

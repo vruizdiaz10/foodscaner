@@ -1078,6 +1078,34 @@ body {
 .dot-gray { background: #64748b; }
 .dot-red { background: #fca5a5; }
 .dot-yellow { background: #fcd34d; }
+.dot-purple { background: #a78bfa; }
+
+.allergen-grid-item.ai-suggested {
+  color: #c4b5fd;
+  border: 1.5px dashed rgba(167, 139, 250, 0.5);
+  background: rgba(167, 139, 250, 0.12);
+  position: relative;
+}
+.allergen-grid-item.ai-suggested .label {
+  color: #c4b5fd;
+}
+.allergen-grid-item.ai-suggested .emoji {
+  filter: none;
+  opacity: 1;
+}
+.ai-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  font-size: 0.7rem;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
+}
+.allergen-tag.ai-suggested {
+  background: rgba(167, 139, 250, 0.15);
+  border: 1.5px dashed rgba(167, 139, 250, 0.45);
+  color: #c4b5fd;
+}
 
 .safe-msg {
   color: var(--accent-primary);
