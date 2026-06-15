@@ -1127,29 +1127,37 @@ function renderProductData(product, barcode) {
 
   // Render Allergen Icon Grid + text tags
   const gridEl = document.getElementById("allergen-icon-grid");
+  const legendEl = document.querySelector(".allergen-legend");
   let anyGridActive = false;
-  if (gridEl) {
-    gridEl.innerHTML = "";
-    const allAllergensLower = (product.allergens || []).map(a => a.toLowerCase());
-    const allTracesLower = (product.traces || []).map(a => a.toLowerCase());
-    COMMON_ALLERGENS.forEach(item => {
-      const div = document.createElement("div");
-      div.className = "allergen-grid-item";
-      const matchesAllergen = item.match.some(m => allAllergensLower.some(a => a.includes(m)));
-      const matchesTrace = item.match.some(m => allTracesLower.some(t => t.includes(m)));
-      const matchesGluten = item.checkGluten && product.gluten && product.gluten.hasGluten;
-      if (matchesAllergen || matchesGluten) {
-        div.classList.add("detected");
-        anyGridActive = true;
-      } else if (matchesTrace) {
-        div.classList.add("traces");
-        anyGridActive = true;
-      } else {
-        div.classList.add("safe");
-      }
-      div.innerHTML = `<span class="emoji">${item.emoji}</span><span class="label">${item.label}</span>`;
-      gridEl.appendChild(div);
-    });
+  if (product.allergensDataAvailable === false) {
+    if (gridEl) gridEl.classList.add("hidden");
+    if (legendEl) legendEl.classList.add("hidden");
+  } else {
+    if (gridEl) {
+      gridEl.classList.remove("hidden");
+      gridEl.innerHTML = "";
+      const allAllergensLower = (product.allergens || []).map(a => a.toLowerCase());
+      const allTracesLower = (product.traces || []).map(a => a.toLowerCase());
+      COMMON_ALLERGENS.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "allergen-grid-item";
+        const matchesAllergen = item.match.some(m => allAllergensLower.some(a => a.includes(m)));
+        const matchesTrace = item.match.some(m => allTracesLower.some(t => t.includes(m)));
+        const matchesGluten = item.checkGluten && product.gluten && product.gluten.hasGluten;
+        if (matchesAllergen || matchesGluten) {
+          div.classList.add("detected");
+          anyGridActive = true;
+        } else if (matchesTrace) {
+          div.classList.add("traces");
+          anyGridActive = true;
+        } else {
+          div.classList.add("safe");
+        }
+        div.innerHTML = `<span class="emoji">${item.emoji}</span><span class="label">${item.label}</span>`;
+        gridEl.appendChild(div);
+      });
+    }
+    if (legendEl) legendEl.classList.remove("hidden");
   }
 
   // Text tags for non-common allergens
