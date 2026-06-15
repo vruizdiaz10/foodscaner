@@ -1355,35 +1355,35 @@ function runAICheck(product) {
 
     // Merge AI dietary data with OFF data (AI fills gaps when OFF is null)
     if (data.dietary && product.dietary) {
-      if (product.dietary.vegan === null && data.dietary.vegan !== undefined) {
+      if (product.dietary.vegan == null && data.dietary.vegan !== undefined) {
         product.dietary.vegan = data.dietary.vegan;
         product.dietary.veganSource = 'ai';
       }
-      if (product.dietary.vegetarian === null && data.dietary.vegetarian !== undefined) {
+      if (product.dietary.vegetarian == null && data.dietary.vegetarian !== undefined) {
         product.dietary.vegetarian = data.dietary.vegetarian;
         product.dietary.vegetarianSource = 'ai';
       }
-      if (product.dietary.halal === null && data.dietary.halal !== undefined) {
+      if (product.dietary.halal == null && data.dietary.halal !== undefined) {
         product.dietary.halal = data.dietary.halal;
         product.dietary.halalSource = 'ai';
       }
-      if (product.dietary.organic === null && data.dietary.organic !== undefined) {
+      if (product.dietary.organic == null && data.dietary.organic !== undefined) {
         product.dietary.organic = data.dietary.organic;
         product.dietary.organicSource = 'ai';
       }
-      if (product.dietary.nonGmo === null && data.dietary.nonGmo !== undefined) {
+      if (product.dietary.nonGmo == null && data.dietary.nonGmo !== undefined) {
         product.dietary.nonGmo = data.dietary.nonGmo;
         product.dietary.nonGmoSource = 'ai';
       }
-      if (product.dietary.noAdditives === null && data.dietary.noAdditives !== undefined) {
+      if (product.dietary.noAdditives == null && data.dietary.noAdditives !== undefined) {
         product.dietary.noAdditives = data.dietary.noAdditives;
         product.dietary.noAdditivesSource = 'ai';
       }
-      if (product.dietary.palmOilFree === null && data.dietary.palmOilFree !== undefined) {
+      if (product.dietary.palmOilFree == null && data.dietary.palmOilFree !== undefined) {
         product.dietary.palmOilFree = data.dietary.palmOilFree;
         product.dietary.palmOilFreeSource = 'ai';
       }
-      if (product.dietary.fairTrade === null && data.dietary.fairTrade !== undefined) {
+      if (product.dietary.fairTrade == null && data.dietary.fairTrade !== undefined) {
         product.dietary.fairTrade = data.dietary.fairTrade;
         product.dietary.fairTradeSource = 'ai';
       }

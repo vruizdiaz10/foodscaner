@@ -432,7 +432,8 @@ app.get('/api/product/:barcode', async (req, res) => {
             category: item.category || (isFood ? "Comida / Bebida (Búsqueda global)" : "No Alimenticio"),
             gluten: { hasGluten, details: glutenDetails },
             calories: { value: 0, level: "No Especificado", percent: 10 },
-            allergens: [], nutriscore: "-", isFromFallback: true
+            allergens: [], nutriscore: "-", isFromFallback: true,
+            dietary: {}
           }};
           sourceResults.push({ source: "UpcItemDb", found: true, productName: item.title, brandName: item.brand || "—", allergenInfo: "Sin datos", nutritionInfo: "Sin datos" });
         } else {
@@ -473,7 +474,8 @@ app.get('/api/product/:barcode', async (req, res) => {
               category: p.category || (isFoodGtin ? "Comida / Bebida (GTINHub)" : "No Alimenticio"),
               gluten: { hasGluten: hasGlutenGtin, details: hasGlutenGtin ? "Contiene gluten (detectado)" : "Información no disponible (Requiere verificar el empaque)" },
               calories: { value: 0, level: "No Especificado", percent: 10 },
-              allergens: [], nutriscore: "-", isFromFallback: true
+              allergens: [], nutriscore: "-", isFromFallback: true,
+              dietary: {}
             }};
             sourceResults.push({ source: "GTINHub", found: true, productName: nameGtin, brandName: brandGtin, allergenInfo: "Sin datos", nutritionInfo: "Sin datos" });
           } else {
@@ -591,7 +593,7 @@ app.get('/api/product/:barcode', async (req, res) => {
           gluten: enrichment.gluten, calories: enrichment.calories,
           allergens: enrichment.allergens, nutriscore: "-", isFromFallback: true,
           _enrichedFrom: "USDA (IA + nombre)", _sugars_enriched: enrichment.sugars,
-          nutriments: {}
+          nutriments: {}, dietary: {}
         };
         if (enrichment.saturatedFat != null) gp.nutriments['saturated-fat_100g'] = enrichment.saturatedFat;
         if (enrichment.sodium != null) gp.nutriments['sodium_100g'] = Math.round(enrichment.sodium) / 1000;
