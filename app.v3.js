@@ -57,6 +57,7 @@ const newProductForm = document.getElementById("new-product-form");
 
 let currentBarcodeQuery = "";
 let currentDataSources = "";
+let currentSourceResults = [];
 
 const COMMON_ALLERGENS = [
   { emoji: "🥛", label: "Lácteos", match: ["leche", "lácteos", "lactosa", "milk", "dairy"] },
@@ -341,6 +342,7 @@ async function analyzeBarcode(barcode) {
     }
 
     currentDataSources = data.sourceLabel || "Desconocido";
+    currentSourceResults = data.sourceResults || [];
 
     // Process and normalize API data
     if (data.source === 'local') {
@@ -349,12 +351,14 @@ async function analyzeBarcode(barcode) {
       const parsedProduct = parseApiProduct(data.product);
       renderProductData(parsedProduct, barcode);
     }
+    renderConfidenceWidget();
   } catch (error) {
     console.warn("Fallo de conexión o CORS al consultar la API. Activando simulación offline para el código:", barcode);
     const simulatedProduct = generateSimulatedProduct(barcode);
     setTimeout(() => {
       currentDataSources = "Simulado (Sin Conexión)";
       renderProductData(simulatedProduct, barcode);
+      renderConfidenceWidget();
     }, 500);
   }
 }
@@ -1331,25 +1335,18 @@ function renderProductData(product, barcode) {
 let _lastAiProductKey = "";
 
 function runAICheck(product) {
-  const aiSection = document.getElementById("ai-query-section");
-  if (!aiSection) return;
-
   showDBDisclaimer(product);
 
   const key = product.name + "|" + product.brand;
   if (key === _lastAiProductKey) return;
   _lastAiProductKey = key;
 
-  const loading = document.getElementById("ai-query-loading");
-  const result = document.getElementById("ai-query-result");
-  const error = document.getElementById("ai-query-error");
-  if (!loading || !result || !error) return;
+  const loadingEl = document.getElementById("ai-loading");
+  const errorEl = document.getElementById("ai-error");
+  if (!loadingEl || !errorEl) return;
 
-  aiSection.classList.remove("hidden");
-  aiSection.style.display = "block";
-  loading.classList.remove("hidden");
-  result.classList.add("hidden");
-  error.classList.add("hidden");
+  loadingEl.classList.remove("hidden");
+  errorEl.classList.add("hidden");
 
   fetch('/api/ai-query', {
     method: 'POST',
@@ -1368,10 +1365,10 @@ function runAICheck(product) {
   })
   .then(r => r.json())
   .then(data => {
-    loading.classList.add("hidden");
+    loadingEl.classList.add("hidden");
     if (data.error) {
-      error.textContent = "Error: " + (data.details || data.error);
-      error.classList.remove("hidden");
+      errorEl.textContent = "Error: " + (data.details || data.error);
+      errorEl.classList.remove("hidden");
       return;
     }
 
@@ -1536,26 +1533,44 @@ function runAICheck(product) {
       renderDiabetesCard(data.diabetes);
     }
 
-    const missingData = product.gluten?.dataAvailable === false || product.allergensDataAvailable === false;
-    if (product.isFromFallback || missingData) {
-      // Override AI gluten if product is certified or claims GF
-      if (product.gluten?._isGf && data.gluten?.hasGluten) {
-        data.gluten.hasGluten = false;
-        data.gluten.details = product.gluten.details;
-      }
-      renderAIResult(data);
-      result.classList.remove("hidden");
-    } else {
-      if (!compareWithDB(data, product)) {
-        aiSection.classList.add("hidden");
-        aiSection.style.display = "";
+    // Merge AI gluten data into dietary badges (fills gaps when no DB data)
+    if (data.gluten && product.gluten) {
+      if (product.gluten.dataAvailable === false || product.gluten.classification === "no_info") {
+        product.gluten.hasGluten = data.gluten.hasGluten;
+        product.gluten.details = data.gluten.details || product.gluten.details;
+        product.gluten.classification = "declared";
+        product.gluten.dataAvailable = true;
+        product.gluten.source = 'ai';
+        renderDietaryBadges(product);
       }
     }
+
+    // Poblar widget de confianza (semáforo)
+    const confidenceEl = document.getElementById("confidence-ai");
+    const aiLevelEl = document.getElementById("confidence-ai-level");
+    if (data.confidence && confidenceEl && aiLevelEl) {
+      const level = (data.confidence || "").toLowerCase();
+      const emojis = { alta: "🟢", media: "🟡", baja: "🔴" };
+      const labels = { alta: "Alta", media: "Media", baja: "Baja" };
+      aiLevelEl.innerHTML = `${emojis[level] || "⚪"} ${labels[level] || data.confidence || "N/A"}`;
+      aiLevelEl.className = "confidence-ai-level confidence-ai-" + (level === "alta" ? "alta" : level === "media" ? "media" : "baja");
+      confidenceEl.classList.remove("hidden");
+    }
+    const notesEl = document.getElementById("confidence-notes");
+    const notesTextEl = document.getElementById("confidence-notes-text");
+    if (data.notes && notesEl && notesTextEl) {
+      notesTextEl.textContent = data.notes;
+      notesEl.classList.remove("hidden");
+    }
+
+    // Ocultar loading y error
+    loadingEl.classList.add("hidden");
+    errorEl.classList.add("hidden");
   })
   .catch(err => {
-    loading.classList.add("hidden");
-    error.textContent = "Error de conexión: " + err.message;
-    error.classList.remove("hidden");
+    loadingEl.classList.add("hidden");
+    errorEl.textContent = "Error de conexión: " + err.message;
+    errorEl.classList.remove("hidden");
   });
 }
 
@@ -1573,105 +1588,6 @@ function showDBDisclaimer(product) {
   if (product._enrichedFrom) sources.push(product._enrichedFrom);
   sourceEl.textContent = sources.join(" + ") || "Open Food Facts";
   el.classList.remove("hidden");
-}
-
-function compareWithDB(aiData, product) {
-  const result = document.getElementById("ai-query-result");
-  const glutenLine = document.getElementById("ai-gluten-line");
-  const allergensLine = document.getElementById("ai-allergens-line");
-  const confidenceLine = document.getElementById("ai-confidence-line");
-  const notesLine = document.getElementById("ai-notes-line");
-  const diabetesLine = document.getElementById("ai-diabetes-line");
-  if (!result || !glutenLine || !allergensLine || !confidenceLine || !notesLine) return;
-
-  glutenLine.innerHTML = "";
-  allergensLine.innerHTML = "";
-  confidenceLine.innerHTML = "";
-  notesLine.innerHTML = "";
-  result.classList.add("hidden");
-
-  let hasDiscrepancy = false;
-
-  if (product.gluten && aiData.gluten && product.gluten.dataAvailable !== false && !product.gluten._isGf) {
-    const dbVal = product.gluten.hasGluten;
-    const aiVal = aiData.gluten.hasGluten;
-    if (dbVal !== aiVal) {
-      const conf = (aiData.confidence || "").toLowerCase();
-      const confNote = conf && conf !== "alta" ? ` (Confianza: ${conf})` : "";
-      if (dbVal) {
-        glutenLine.innerHTML = `<strong>Gluten:</strong> La información declarada indica que contiene gluten, pero la IA no pudo confirmarlo${confNote}.`;
-      } else {
-        const details = aiData.gluten.details || "ingredientes detectados por IA";
-        const prefix = conf === "baja" ? "la IA sugiere posible presencia de gluten sin certeza" : "se sospecha la posible presencia de gluten debido a que";
-        const sep = conf === "baja" ? ": " : " ";
-        glutenLine.innerHTML = `<strong>Gluten:</strong> Si bien la información declarada no indica contenido de gluten, ${prefix}${sep}${details}${confNote}.`;
-      }
-      hasDiscrepancy = true;
-    }
-  }
-
-  if (product.allergensDataAvailable !== false && aiData.allergens) {
-    const allKnown = [
-      ...(product.allergens || []),
-      ...(product.traces || [])
-    ].map(a => a.toLowerCase().trim());
-
-    // Filter out gluten-related allergens from AI response (handled in dedicated section)
-    const aiAll = (aiData.allergens || []).filter(a => !isGlutenRelated(a)).map(a => a.toLowerCase().trim());
-
-    // Canonical mapping: resolve synonyms to a single form
-    const canonical = (s) => {
-      const map = { "soya": "soja", "mani": "cacahuate", "cacahuete": "cacahuate", "lácteos": "leche" };
-      return map[s] || s;
-    };
-
-    // Extract all meaningful words (including from parentheticals)
-    const allWords = (s) => s.replace(/[^a-záéíóúñ]/g, " ").split(/\s+/).filter(w => w.length > 2);
-
-    const matchesKnown = (a) => {
-      const ca = canonical(a);
-      // exact match after canonical normalization (remove parentheticals for this check)
-      const stripParen = (s) => s.replace(/\s*\(.*?\)\s*/g, "").trim();
-      if (allKnown.some(k => canonical(stripParen(k)) === stripParen(ca))) return true;
-      // shared word match (including parenthetical content)
-      const wa = allWords(ca);
-      return allKnown.some(k => {
-        const wk = allWords(k);
-        return wa.some(w => wk.includes(w));
-      });
-    };
-
-    const aiOnly = aiAll.filter(a => !matchesKnown(a));
-    if (aiOnly.length > 0) {
-      allergensLine.innerHTML = "<strong>Alérgenos:</strong> Es posible la presencia de alérgenos adicionales no incluidos en la información declarada: <strong>" + aiOnly.join(", ") + "</strong>.";
-      hasDiscrepancy = true;
-    }
-  }
-
-  // Always show diabetes analysis if AI returned it
-  if (aiData.diabetes) {
-    if (diabetesLine) {
-      diabetesLine.classList.remove("hidden");
-      const riskLabels = { bajo: "Bajo 🟢", medio: "Medio 🟡", alto: "Alto 🔴" };
-      const impactLabels = { bajo: "Bajo 🟢", medio: "Medio 🟡", alto: "Alto 🔴" };
-      const riskText = riskLabels[aiData.diabetes.risk] || aiData.diabetes.risk || "N/A";
-      const impactText = impactLabels[aiData.diabetes.glycemicImpact] || aiData.diabetes.glycemicImpact || "N/A";
-      document.getElementById("ai-diabetes-risk").innerHTML = riskText;
-      document.getElementById("ai-glycemic-impact").innerHTML = impactText;
-      document.getElementById("ai-diabetes-notes").textContent = aiData.diabetes.notes || "";
-      renderDiabetesCard(aiData.diabetes);
-    }
-  } else if (diabetesLine) {
-    diabetesLine.classList.add("hidden");
-  }
-
-  if (hasDiscrepancy || (aiData.diabetes && aiData.diabetes.risk)) {
-    result.classList.remove("hidden");
-  } else {
-    result.classList.add("hidden");
-  }
-
-  return hasDiscrepancy;
 }
 
 function renderDiabetesCard(d) {
@@ -1697,50 +1613,28 @@ function renderDiabetesCard(d) {
   card.classList.remove("hidden");
 }
 
-function renderAIResult(data) {
-  const glutenLine = document.getElementById("ai-gluten-line");
-  const allergensLine = document.getElementById("ai-allergens-line");
-  const confidenceLine = document.getElementById("ai-confidence-line");
-  const notesLine = document.getElementById("ai-notes-line");
-  const diabetesLine = document.getElementById("ai-diabetes-line");
+function renderConfidenceWidget() {
+  const card = document.getElementById("card-confidence");
+  const sourcesEl = document.getElementById("confidence-sources");
+  if (!card || !sourcesEl) return;
 
-  if (glutenLine) {
-    const g = data.gluten || {};
-    const icon = g.hasGluten ? "⚠️" : "✅";
-    const details = g.details || "Sin determinar";
-    glutenLine.innerHTML = `<strong>Gluten:</strong> ${icon} ${details}`;
-    glutenLine.style.color = g.hasGluten ? "var(--accent-alert)" : "var(--accent-primary)";
+  // Fuentes consultadas
+  sourcesEl.innerHTML = "";
+  if (currentSourceResults.length > 0) {
+    currentSourceResults.forEach(sr => {
+      const tag = document.createElement("span");
+      tag.className = "confidence-source-item confidence-source-" + (sr.found ? "found" : "miss");
+      tag.innerHTML = `${sr.found ? "✅" : "❌"} ${sr.source}`;
+      tag.title = sr.found ? `${sr.productName} — ${sr.brandName}` : "No encontrado";
+      sourcesEl.appendChild(tag);
+    });
+  } else if (currentDataSources) {
+    const tag = document.createElement("span");
+    tag.className = "confidence-source-item confidence-source-found";
+    tag.textContent = currentDataSources;
+    sourcesEl.appendChild(tag);
   }
-
-  if (allergensLine) {
-    const a = data.allergens || [];
-    const text = a.length > 0 ? a.join(", ") : "No se detectaron alérgenos comunes";
-    allergensLine.innerHTML = `<strong>Alérgenos:</strong> ${text}`;
-    allergensLine.style.color = a.length > 0 ? "var(--accent-alert)" : "var(--accent-primary)";
-  }
-
-  if (confidenceLine) {
-    const labels = { alta: "Alta", media: "Media", baja: "Baja" };
-    confidenceLine.textContent = `Confianza: ${labels[data.confidence] || data.confidence || "N/A"}`;
-  }
-
-  if (notesLine) {
-    notesLine.textContent = data.notes ? `📝 ${data.notes}` : "";
-  }
-
-  if (diabetesLine && data.diabetes) {
-    diabetesLine.classList.remove("hidden");
-    const riskLabels = { bajo: "Bajo 🟢", medio: "Medio 🟡", alto: "Alto 🔴" };
-    const impactLabels = { bajo: "Bajo 🟢", medio: "Medio 🟡", alto: "Alto 🔴" };
-    const riskText = riskLabels[data.diabetes.risk] || data.diabetes.risk || "N/A";
-    const impactText = impactLabels[data.diabetes.glycemicImpact] || data.diabetes.glycemicImpact || "N/A";
-    document.getElementById("ai-diabetes-risk").innerHTML = riskText;
-    document.getElementById("ai-glycemic-impact").innerHTML = impactText;
-    document.getElementById("ai-diabetes-notes").textContent = data.diabetes.notes || "";
-    renderDiabetesCard(data.diabetes);
-  } else if (diabetesLine) {
-    diabetesLine.classList.add("hidden");
-  }
+  card.classList.remove("hidden");
 }
 
 // Render rejected state screen

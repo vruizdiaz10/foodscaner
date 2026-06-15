@@ -1405,6 +1405,42 @@ body {
 .level-indicator.carbs-mod { color: var(--accent-alert); }
 .level-indicator.carbs-low { color: var(--accent-primary); }
 
+/* Confidence card */
+.confidence-section {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.confidence-source-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(148,163,184,0.15);
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  margin: 0 4px 4px 0;
+}
+.confidence-source-found { color: #34d399; }
+.confidence-source-miss { color: #64748b; }
+.confidence-ai-level {
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px;
+  border-radius: 20px;
+  border: 2px solid currentColor;
+}
+.confidence-ai-alta { color: #10b981; }
+.confidence-ai-media { color: #d97706; }
+.confidence-ai-baja { color: #dc2626; }
+.confidence-notes-text {
+  font-style: italic;
+  color: var(--text-muted);
+}
+
 /* Mexican Warning Seals (NOM-051) */
 .sellos-container {
   display: flex;
