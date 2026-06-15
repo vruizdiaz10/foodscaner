@@ -1533,6 +1533,11 @@ function runAICheck(product) {
       }
     }
 
+    // Poblar widget de diabetes en el analysis grid
+    if (data.diabetes) {
+      renderDiabetesCard(data.diabetes);
+    }
+
     const missingData = product.gluten?.dataAvailable === false || product.allergensDataAvailable === false;
     if (product.isFromFallback || missingData) {
       // Override AI gluten if product is certified or claims GF
@@ -1656,6 +1661,7 @@ function compareWithDB(aiData, product) {
       document.getElementById("ai-diabetes-risk").innerHTML = riskText;
       document.getElementById("ai-glycemic-impact").innerHTML = impactText;
       document.getElementById("ai-diabetes-notes").textContent = aiData.diabetes.notes || "";
+      renderDiabetesCard(aiData.diabetes);
     }
   } else if (diabetesLine) {
     diabetesLine.classList.add("hidden");
@@ -1668,6 +1674,29 @@ function compareWithDB(aiData, product) {
   }
 
   return hasDiscrepancy;
+}
+
+function renderDiabetesCard(d) {
+  const card = document.getElementById("card-diabetes");
+  const riskEl = document.getElementById("diabetes-risk");
+  const impactEl = document.getElementById("diabetes-impact");
+  const notesEl = document.getElementById("diabetes-notes");
+  if (!card || !riskEl) return;
+  const riskLabels = { bajo: "Bajo 🟢", medio: "Medio 🟡", alto: "Alto 🔴" };
+  const impactLabels = { bajo: "Bajo 🟢", medio: "Medio 🟡", alto: "Alto 🔴" };
+  const riskText = riskLabels[d.risk] || d.risk || "N/A";
+  const impactText = impactLabels[d.glycemicImpact] || d.glycemicImpact || "N/A";
+  riskEl.textContent = riskText;
+  riskEl.className = "status-value diabetes-risk-" + (d.risk || "bajo");
+  if (impactEl) {
+    impactEl.classList.remove("hidden");
+    impactEl.textContent = "Impacto glucémico: " + impactText;
+  }
+  if (notesEl) {
+    notesEl.classList.remove("hidden");
+    notesEl.textContent = d.notes || "";
+  }
+  card.classList.remove("hidden");
 }
 
 function renderAIResult(data) {
@@ -1710,6 +1739,7 @@ function renderAIResult(data) {
     document.getElementById("ai-diabetes-risk").innerHTML = riskText;
     document.getElementById("ai-glycemic-impact").innerHTML = impactText;
     document.getElementById("ai-diabetes-notes").textContent = data.diabetes.notes || "";
+    renderDiabetesCard(data.diabetes);
   } else if (diabetesLine) {
     diabetesLine.classList.add("hidden");
   }

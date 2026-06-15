@@ -1381,6 +1381,26 @@ body {
   margin: 2px 0 0;
 }
 
+#card-diabetes .status-value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.diabetes-risk-alto { color: #ef4444; }
+.diabetes-risk-medio { color: #f59e0b; }
+.diabetes-risk-bajo { color: #10b981; }
+.diabetes-impact-text {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 4px 0 0;
+}
+.diabetes-notes-text {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 4px 0 0;
+}
+
 .level-indicator.carbs-high { color: var(--accent-error); }
 .level-indicator.carbs-mod { color: var(--accent-alert); }
 .level-indicator.carbs-low { color: var(--accent-primary); }
