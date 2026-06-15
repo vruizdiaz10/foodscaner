@@ -1067,6 +1067,9 @@ function renderProductData(product, barcode) {
   if (product.isFromFallback && !product._enrichedFrom) {
     analysisGrid.classList.add("hidden");
     noNutritionAlert.classList.remove("hidden");
+    renderHypertensionCard(product);
+    renderCholesterolCard(product);
+    renderWeightCard(product);
     runAICheck(product);
     return;
   }
@@ -1624,11 +1627,34 @@ function renderDiabetesCard(d) {
     notesEl.textContent = d.notes || "";
   }
   card.classList.remove("hidden");
+  showHealthRisks();
+}
+
+function showHealthRisks() {
+  const container = document.getElementById("card-health-risks");
+  if (!container) return;
+  const cards = container.querySelectorAll(".health-card");
+  const anyVisible = Array.from(cards).some(c => !c.classList.contains("hidden"));
+  container.classList.toggle("hidden", !anyVisible);
+}
+
+function setRiskBar(progressEl, levelEl, risk, pct) {
+  if (progressEl) {
+    progressEl.style.width = Math.min(100, Math.max(0, pct)) + "%";
+    progressEl.style.background = risk === "alto" || risk === "alta" ? "var(--accent-error)" : risk === "medio" || risk === "media" ? "var(--accent-alert)" : "var(--accent-primary)";
+  }
+  if (levelEl) {
+    const cls = risk === "alto" || risk === "alta" ? "high" : risk === "medio" || risk === "media" ? "mod" : "low";
+    levelEl.className = "level-indicator health-level-" + cls;
+    levelEl.textContent = (risk === "alto" || risk === "alta" ? "Alto" : risk === "medio" || risk === "media" ? "Medio" : "Bajo");
+  }
 }
 
 function renderHypertensionCard(product) {
   const card = document.getElementById("card-hypertension");
   const riskEl = document.getElementById("hypertension-risk");
+  const progressEl = document.getElementById("hypertension-progress");
+  const levelEl = document.getElementById("hypertension-level");
   const sodiumEl = document.getElementById("hypertension-sodium");
   const notesEl = document.getElementById("hypertension-notes");
   if (!card || !riskEl) return;
@@ -1636,13 +1662,14 @@ function renderHypertensionCard(product) {
   let sodiumMg = null;
   if (nutriments['sodium_100g'] !== undefined) sodiumMg = Math.round(nutriments['sodium_100g'] * 1000);
   if (sodiumMg === null && nutriments['salt_100g'] !== undefined) sodiumMg = Math.round(nutriments['salt_100g'] * 0.393 * 1000);
-  if (sodiumMg === null || sodiumMg === 0) { card.classList.add("hidden"); return; }
+  if (sodiumMg === null || sodiumMg === 0) { card.classList.add("hidden"); showHealthRisks(); return; }
   let risk, label;
   if (sodiumMg > 400) { risk = "alto"; label = "Alto 🔴"; }
   else if (sodiumMg >= 120) { risk = "medio"; label = "Medio 🟡"; }
   else { risk = "bajo"; label = "Bajo 🟢"; }
   riskEl.textContent = label;
   riskEl.className = "status-value hypertension-risk-" + risk;
+  setRiskBar(progressEl, levelEl, risk, (sodiumMg / 800) * 100);
   if (sodiumEl) {
     sodiumEl.classList.remove("hidden");
     sodiumEl.textContent = "Sodio: " + sodiumMg + " mg / 100g";
@@ -1657,16 +1684,19 @@ function renderHypertensionCard(product) {
     notesEl.textContent = notes;
   }
   card.classList.remove("hidden");
+  showHealthRisks();
 }
 
 function renderCholesterolCard(product) {
   const card = document.getElementById("card-cholesterol");
   const riskEl = document.getElementById("cholesterol-risk");
+  const progressEl = document.getElementById("cholesterol-progress");
+  const levelEl = document.getElementById("cholesterol-level");
   const satfatEl = document.getElementById("cholesterol-satfat");
   const notesEl = document.getElementById("cholesterol-notes");
   if (!card || !riskEl) return;
   const satFat = product.nutriments?.['saturated-fat_100g'];
-  if (satFat === undefined || satFat === null) { card.classList.add("hidden"); return; }
+  if (satFat === undefined || satFat === null) { card.classList.add("hidden"); showHealthRisks(); return; }
   const satFatR = Math.round(satFat * 10) / 10;
   let risk, label;
   if (satFatR > 6) { risk = "alto"; label = "Alto 🔴"; }
@@ -1674,6 +1704,7 @@ function renderCholesterolCard(product) {
   else { risk = "bajo"; label = "Bajo 🟢"; }
   riskEl.textContent = label;
   riskEl.className = "status-value cholesterol-risk-" + risk;
+  setRiskBar(progressEl, levelEl, risk, (satFatR / 12) * 100);
   if (satfatEl) {
     satfatEl.classList.remove("hidden");
     satfatEl.textContent = "Grasas saturadas: " + satFatR + " g / 100g";
@@ -1688,22 +1719,26 @@ function renderCholesterolCard(product) {
     notesEl.textContent = notes;
   }
   card.classList.remove("hidden");
+  showHealthRisks();
 }
 
 function renderWeightCard(product) {
   const card = document.getElementById("card-weight");
   const densityEl = document.getElementById("weight-density");
+  const progressEl = document.getElementById("weight-progress");
+  const levelEl = document.getElementById("weight-level");
   const detailEl = document.getElementById("weight-detail");
   const notesEl = document.getElementById("weight-notes");
   if (!card || !densityEl) return;
   const kcal = product.calories?.value || 0;
-  if (kcal === 0) { card.classList.add("hidden"); return; }
+  if (kcal === 0) { card.classList.add("hidden"); showHealthRisks(); return; }
   let risk, label, detail;
   if (kcal > 300) { risk = "alta"; label = "Alta 🔴"; detail = "Densidad calórica alta (>300 kcal/100g). Porción pequeña = muchas calorías."; }
   else if (kcal >= 150) { risk = "media"; label = "Media 🟡"; detail = "Densidad calórica moderada (150–300 kcal/100g). Moderar porciones."; }
   else { risk = "baja"; label = "Baja 🟢"; detail = "Densidad calórica baja (<150 kcal/100g). Apto para control de peso."; }
   densityEl.textContent = label;
   densityEl.className = "status-value weight-density-" + risk;
+  setRiskBar(progressEl, levelEl, risk, (kcal / 600) * 100);
   if (detailEl) {
     detailEl.classList.remove("hidden");
     detailEl.textContent = kcal + " kcal / 100g — " + detail;
@@ -1722,6 +1757,7 @@ function renderWeightCard(product) {
     }
   }
   card.classList.remove("hidden");
+  showHealthRisks();
 }
 
 function renderConfidenceWidget() {

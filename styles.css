@@ -1315,6 +1315,18 @@ body {
   font-size: 0.75rem;
 }
 
+/* Health Risks Section */
+#card-health-risks { padding: 0 !important; overflow: hidden; }
+.health-risks-details { width: 100%; padding: 0; border: none; border-radius: 0; background: transparent; overflow: hidden; }
+.health-risks-details summary { cursor: pointer; padding: 14px 18px; font-family: var(--font-display); font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); user-select: none; list-style: none; display: flex; align-items: center; gap: 8px; }
+.health-risks-details summary::-webkit-details-marker { display: none; }
+.health-risks-details summary::before { content: "▶"; font-size: 0.75rem; color: var(--text-muted); transition: transform 0.2s ease; }
+.health-risks-details[open] summary::before { transform: rotate(90deg); }
+.health-risks-details summary:hover { background: rgba(255, 255, 255, 0.03); }
+.health-risks-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 16px 16px; }
+@media (max-width: 550px) { .health-risks-grid { grid-template-columns: 1fr; } }
+.health-card { padding: 14px !important; gap: 12px !important; }
+
 /* Collapsible Ingredients Section */
 .card-collapsible {
   padding: 0 !important;
@@ -1381,55 +1393,25 @@ body {
   margin: 2px 0 0;
 }
 
-#card-diabetes .status-value {
-  font-size: 1.8rem;
-  font-weight: 800;
-  line-height: 1;
-}
-.diabetes-risk-alto { color: #ef4444; }
-.diabetes-risk-medio { color: #f59e0b; }
-.diabetes-risk-bajo { color: #10b981; }
-.diabetes-impact-text {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  margin: 4px 0 0;
-}
-.diabetes-notes-text {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  font-style: italic;
-  margin: 4px 0 0;
-}
+.health-card .status-value { font-size: 1.4rem !important; font-weight: 700 !important; line-height: 1; }
+.health-card .level-indicator { font-size: 0.7rem !important; }
+.diabetes-risk-alto, .hypertension-risk-alto, .cholesterol-risk-alto, .weight-density-alta { color: #ef4444; }
+.diabetes-risk-medio, .hypertension-risk-medio, .cholesterol-risk-medio, .weight-density-media { color: #f59e0b; }
+.diabetes-risk-bajo, .hypertension-risk-bajo, .cholesterol-risk-bajo, .weight-density-baja { color: #10b981; }
+.diabetes-impact-text, .hypertension-sodium-text, .cholesterol-satfat-text, .weight-detail-text { font-size: 0.8rem; color: var(--text-secondary); margin: 2px 0 0; }
+.diabetes-notes-text, .hypertension-notes-text, .cholesterol-notes-text, .weight-notes-text { font-size: 0.7rem; color: var(--text-muted); font-style: italic; margin: 2px 0 0; }
+.health-level-high { color: var(--accent-error) !important; }
+.health-level-mod { color: var(--accent-alert) !important; }
+.health-level-low { color: var(--accent-primary) !important; }
+.health-card h4 { font-size: 0.82rem !important; }
+.health-card .card-icon-wrapper { padding: 6px !important; }
+.health-card .card-icon { width: 18px !important; height: 18px !important; }
 
 .level-indicator.carbs-high { color: var(--accent-error); }
 .level-indicator.carbs-mod { color: var(--accent-alert); }
 .level-indicator.carbs-low { color: var(--accent-primary); }
 
-#card-hypertension .status-value,
-#card-cholesterol .status-value,
-#card-weight .status-value {
-  font-size: 1.8rem;
-  font-weight: 800;
-  line-height: 1;
-}
-.hypertension-risk-alto, .cholesterol-risk-alto, .weight-density-alta { color: #ef4444; }
-.hypertension-risk-medio, .cholesterol-risk-medio, .weight-density-media { color: #f59e0b; }
-.hypertension-risk-bajo, .cholesterol-risk-bajo, .weight-density-baja { color: #10b981; }
-.hypertension-sodium-text,
-.cholesterol-satfat-text,
-.weight-detail-text {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  margin: 4px 0 0;
-}
-.hypertension-notes-text,
-.cholesterol-notes-text,
-.weight-notes-text {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  font-style: italic;
-  margin: 4px 0 0;
-}
+
 
 /* Confidence card */
 .confidence-section {
