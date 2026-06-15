@@ -673,6 +673,16 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin explicaciones adicionales, 
     "palmOilFree": true,
     "fairTrade": true
   },
+  "dietaryDetails": {
+    "vegan": "Explicación de por qué es o no vegano, mencionando ingredientes específicos si aplica.",
+    "vegetarian": "Explicación de por qué es o no vegetariano.",
+    "halal": "Explicación de por qué es o no halal.",
+    "organic": "Explicación de por qué es o no orgánico.",
+    "nonGmo": "Explicación de por qué es o no libre de OGM.",
+    "noAdditives": "Explicación de por qué es o no libre de aditivos.",
+    "palmOilFree": "Explicación de por qué es o no libre de aceite de palma.",
+    "fairTrade": "Explicación de por qué es o no de comercio justo."
+  },
   "notRecommended": [
     {"grupo": "Niños", "razon": "Contiene edulcorantes y cafeína"},
     {"grupo": "Embarazadas", "razon": "Contiene cafeína"}
@@ -695,6 +705,7 @@ REGLAS ESTRICTAS:
 - DIABETES: Si no hay datos de azúcares ni carbohidratos, usa riesgo "bajo" con confidence "baja" y explain en notes.
 - No incluyas información de diabetes en el campo "notes" principal, úsala en "diabetes.notes".
 - DIETARY: Analiza cada campo basado en la lista de ingredientes: vegan (sin origen animal), vegetarian (sin carne/pescado), halal (sin cerdo/alcohol/gelatina), organic (ingredientes orgánicos), nonGmo (sin OGM), noAdditives (sin aditivos/preservantes artificiales), palmOilFree (sin aceite de palma), fairTrade (comercio justo, solo si el nombre o marca lo indica). Si no hay lista de ingredientes, usa confidence "baja" y basa tu respuesta en conocimiento general.
+- DIETARYDETAILS: Para cada campo en dietaryDetails, proporciona una explicación específica que mencione ingredientes concretos del producto que justifiquen tu decisión. Ejemplo: si vegan=false porque contiene "leche entera", el detail debe decir "Contiene leche entera (ingrediente de origen animal)". Si no hay lista de ingredientes, explica que el análisis se basa en conocimiento general del producto.
 - NOTRECOMMENDED: Identifica grupos de población para los que este producto NO es recomendable según sus ingredientes. Ej: "Niños" si contiene edulcorantes o cafeína, "Embarazadas" si contiene cafeína o alcohol, "Fenilcetonúricos" si contiene aspartame. Incluye siempre una razón específica. Si no hay ingredientes, devuelve array vacío.`;
 
   try {

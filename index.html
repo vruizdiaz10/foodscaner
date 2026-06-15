@@ -15,7 +15,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="styles.css?v=5">
   <!-- html5-qrcode CDN -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
 </head>
@@ -216,45 +216,65 @@
           <div id="dietary-section" class="dietary-section hidden">
             <h4 class="dietary-title">Tipo de Dieta</h4>
             <div id="dietary-badges" class="dietary-table">
-              <div class="dietary-row" title="Certificado libre de gluten por la base de datos o detectado por ingredientes/IA">
+              <div class="dietary-row">
                 <span id="dietary-gluten-attr" class="dietary-attr">🌾 Libre de Gluten</span>
                 <span id="dietary-gluten-status" class="dietary-status unknown">Sin Info</span>
+                <span class="dietary-chevron">▼</span>
+                <div id="dietary-gluten-detail" class="dietary-detail hidden"></div>
               </div>
-              <div class="dietary-row" title="Ingredientes orgánicos certificados o detectados por IA">
+              <div class="dietary-row">
                 <span id="dietary-organic-attr" class="dietary-attr">🌿 Orgánico</span>
                 <span id="dietary-organic-status" class="dietary-status unknown">Sin Info</span>
+                <span class="dietary-chevron">▼</span>
+                <div id="dietary-organic-detail" class="dietary-detail hidden"></div>
               </div>
-              <div class="dietary-row" title="Sin carne/pescado según base de datos o IA">
+              <div class="dietary-row">
                 <span id="dietary-vegetarian-attr" class="dietary-attr">🥦 Vegetariano</span>
                 <span id="dietary-vegetarian-status" class="dietary-status unknown">Sin Info</span>
+                <span class="dietary-chevron">▼</span>
+                <div id="dietary-vegetarian-detail" class="dietary-detail hidden"></div>
               </div>
-              <div class="dietary-row" title="Sin ingredientes de origen animal según base de datos o IA">
+              <div class="dietary-row">
                 <span id="dietary-vegan-attr" class="dietary-attr">🌱 Vegano</span>
                 <span id="dietary-vegan-status" class="dietary-status unknown">Sin Info</span>
+                <span class="dietary-chevron">▼</span>
+                <div id="dietary-vegan-detail" class="dietary-detail hidden"></div>
               </div>
-              <div class="dietary-row" title="Certificación kosher según base de datos">
+              <div class="dietary-row">
                 <span id="dietary-kosher-attr" class="dietary-attr">✡️ Kosher</span>
                 <span id="dietary-kosher-status" class="dietary-status unknown">Sin Info</span>
+                <span class="dietary-chevron">▼</span>
+                <div id="dietary-kosher-detail" class="dietary-detail hidden"></div>
               </div>
-              <div class="dietary-row" title="Sin ingredientes prohibidos (cerdo, alcohol) según base de datos o IA">
+              <div class="dietary-row">
                 <span id="dietary-halal-attr" class="dietary-attr">🌙 Halal</span>
                 <span id="dietary-halal-status" class="dietary-status unknown">Sin Info</span>
+                <span class="dietary-chevron">▼</span>
+                <div id="dietary-halal-detail" class="dietary-detail hidden"></div>
               </div>
-              <div class="dietary-row" title="Sin organismos genéticamente modificados según base de datos o IA">
+              <div class="dietary-row">
                 <span id="dietary-non-gmo-attr" class="dietary-attr">🧬 Sin OGM</span>
                 <span id="dietary-non-gmo-status" class="dietary-status unknown">Sin Info</span>
+                <span class="dietary-chevron">▼</span>
+                <div id="dietary-non-gmo-detail" class="dietary-detail hidden"></div>
               </div>
-              <div class="dietary-row" title="Sin aditivos, conservantes o colorantes artificiales según base de datos o IA">
+              <div class="dietary-row">
                 <span id="dietary-no-additives-attr" class="dietary-attr">🧪 Sin Aditivos</span>
                 <span id="dietary-no-additives-status" class="dietary-status unknown">Sin Info</span>
+                <span class="dietary-chevron">▼</span>
+                <div id="dietary-no-additives-detail" class="dietary-detail hidden"></div>
               </div>
-              <div class="dietary-row" title="Sin aceite de palma según base de datos o IA">
+              <div class="dietary-row">
                 <span id="dietary-palm-oil-free-attr" class="dietary-attr">🌴 Sin Aceite de Palma</span>
                 <span id="dietary-palm-oil-free-status" class="dietary-status unknown">Sin Info</span>
+                <span class="dietary-chevron">▼</span>
+                <div id="dietary-palm-oil-free-detail" class="dietary-detail hidden"></div>
               </div>
-              <div class="dietary-row" title="Comercio justo certificado según base de datos">
+              <div class="dietary-row">
                 <span id="dietary-fair-trade-attr" class="dietary-attr">🤝 Comercio Justo</span>
                 <span id="dietary-fair-trade-status" class="dietary-status unknown">Sin Info</span>
+                <span class="dietary-chevron">▼</span>
+                <div id="dietary-fair-trade-detail" class="dietary-detail hidden"></div>
               </div>
             </div>
           </div>
@@ -447,6 +467,6 @@
   </div>
 
   <!-- App Main Javascript -->
-  <script src="app.v3.js?v=7" defer></script>
+  <script src="app.v3.js?v=8" defer></script>
 </body>
 </html>

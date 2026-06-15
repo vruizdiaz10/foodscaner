@@ -743,31 +743,56 @@ body {
   margin-bottom: 6px;
 }
 .dietary-table {
-  display: table;
   width: 100%;
-  border-collapse: collapse;
 }
 .dietary-row {
-  display: table-row;
-  transition: background 0.15s;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-glass);
+  transition: background 0.2s;
+  cursor: pointer;
+  user-select: none;
 }
 .dietary-row:hover {
-  background: rgba(255,255,255,0.04);
+  background: rgba(255,255,255,0.03);
 }
-.dietary-attr, .dietary-status {
-  display: table-cell;
-  padding: 4px 8px;
-  font-size: 0.78rem;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+.dietary-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
 }
 .dietary-attr {
   font-weight: 500;
   white-space: nowrap;
+  font-size: 0.78rem;
 }
 .dietary-status {
-  text-align: right;
   font-weight: 600;
+  font-size: 0.78rem;
   cursor: help;
+}
+.dietary-chevron {
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  transition: transform 0.2s;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+.dietary-row.open .dietary-chevron {
+  transform: rotate(180deg);
+}
+.dietary-detail {
+  width: 100%;
+  padding: 8px 0 4px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  margin-top: 8px;
+}
+.dietary-detail strong {
+  color: var(--text-primary);
+  font-weight: 600;
 }
 .dietary-status.db-yes { color: #6ee7b7; }
 .dietary-status.ai-yes { color: #fde047; }

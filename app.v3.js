@@ -377,120 +377,136 @@ function renderDietaryBadges(product) {
   const g = product.gluten;
   const glutenRow = document.getElementById("dietary-gluten-attr")?.parentNode;
   const glutenStatus = document.getElementById("dietary-gluten-status");
+  const glutenDetail = document.getElementById("dietary-gluten-detail");
   const veganRow = document.getElementById("dietary-vegan-attr")?.parentNode;
   const veganStatus = document.getElementById("dietary-vegan-status");
+  const veganDetail = document.getElementById("dietary-vegan-detail");
   const vegRow = document.getElementById("dietary-vegetarian-attr")?.parentNode;
   const vegStatus = document.getElementById("dietary-vegetarian-status");
+  const vegDetail = document.getElementById("dietary-vegetarian-detail");
   const kosherRow = document.getElementById("dietary-kosher-attr")?.parentNode;
   const kosherStatus = document.getElementById("dietary-kosher-status");
+  const kosherDetail = document.getElementById("dietary-kosher-detail");
   const halalRow = document.getElementById("dietary-halal-attr")?.parentNode;
   const halalStatus = document.getElementById("dietary-halal-status");
+  const halalDetail = document.getElementById("dietary-halal-detail");
   const organicRow = document.getElementById("dietary-organic-attr")?.parentNode;
   const organicStatus = document.getElementById("dietary-organic-status");
+  const organicDetail = document.getElementById("dietary-organic-detail");
   const nonGmoRow = document.getElementById("dietary-non-gmo-attr")?.parentNode;
   const nonGmoStatus = document.getElementById("dietary-non-gmo-status");
+  const nonGmoDetail = document.getElementById("dietary-non-gmo-detail");
   const noAdditivesRow = document.getElementById("dietary-no-additives-attr")?.parentNode;
   const noAdditivesStatus = document.getElementById("dietary-no-additives-status");
+  const noAdditivesDetail = document.getElementById("dietary-no-additives-detail");
   const palmOilFreeRow = document.getElementById("dietary-palm-oil-free-attr")?.parentNode;
   const palmOilFreeStatus = document.getElementById("dietary-palm-oil-free-status");
+  const palmOilFreeDetail = document.getElementById("dietary-palm-oil-free-detail");
   const fairTradeRow = document.getElementById("dietary-fair-trade-attr")?.parentNode;
   const fairTradeStatus = document.getElementById("dietary-fair-trade-status");
-  function setStatus(el, row, colorClass, text, statusExplained) {
+  const fairTradeDetail = document.getElementById("dietary-fair-trade-detail");
+
+  function setStatus(el, row, colorClass, text) {
     el.className = "dietary-status " + colorClass;
     el.textContent = text;
-    if (statusExplained && row) row.title = statusExplained;
   }
-  const dietNames = {
-    gluten: "libre de gluten",
-    vegan: "vegano",
-    vegetarian: "vegetariano",
-    kosher: "kosher",
-    halal: "halal",
-    organic: "orgánico"
-  };
-  function statusText(colorClass, dietName) {
+
+  function buildGlutenDetail(g) {
+    if (!g) return "No hay información disponible sobre contenido de gluten.";
+    if (g.classification === "certified") return g.details;
+    if (g.classification === "no_info") return "No hay suficiente información en la base de datos para determinar el contenido de gluten.";
+    return g.details;
+  }
+
+  function buildDetailText(colorClass, dietName, extra) {
     const map = {
-      "db-yes": `Sí: El producto se declara explícitamente como ${dietName} según la base de datos.`,
-      "ai-yes": `Probable: Los ingredientes/IA sugieren que es ${dietName}, pero no hay etiqueta oficial.`,
-      "ai-no": `Probable No: Los ingredientes/IA sugieren que NO es ${dietName}, pero no hay declaración oficial.`,
-      "db-no": `No: El producto se declara explícitamente como NO ${dietName} según la base de datos.`,
-      unknown: `Sin Info: No hay información disponible sobre ${dietName}.`
+      "db-yes": `<strong>Declarado como ${dietName}.</strong> ${extra || "Según la base de datos."}`,
+      "ai-yes": `<strong>Probablemente ${dietName}.</strong> Inferido por IA del análisis de ingredientes.${extra ? " " + extra : ""}`,
+      "ai-no": `<strong>Probablemente NO ${dietName}.</strong> Inferido por IA del análisis de ingredientes.${extra ? " " + extra : ""}`,
+      "db-no": `<strong>Declarado como NO ${dietName}.</strong> ${extra || "Según la base de datos."}`,
+      "unknown": `No hay suficiente información en la base de datos para determinar si es ${dietName}.`
     };
     return map[colorClass] || "";
   }
+
+  function setupRow(row, detailEl, detailHtml) {
+    if (!row || !detailEl) return;
+    row.querySelector(".dietary-row-header") || row.insertAdjacentHTML("afterbegin", '<div class="dietary-row-header"></div>');
+    const header = row.querySelector(".dietary-row-header");
+    const attr = row.querySelector(".dietary-attr");
+    const status = row.querySelector(".dietary-status");
+    const chevron = row.querySelector(".dietary-chevron");
+    if (attr && status && chevron) {
+      header.innerHTML = "";
+      header.appendChild(attr);
+      header.appendChild(status);
+      header.appendChild(chevron);
+    }
+    detailEl.innerHTML = detailHtml || "";
+    row.onclick = function(e) {
+      if (e.target.closest(".dietary-detail")) return;
+      row.classList.toggle("open");
+      detailEl.classList.toggle("hidden");
+    };
+  }
+
   // Gluten row
   if (g) {
+    let glutenColor, glutenText;
     if (g.classification === "certified") {
-      setStatus(glutenStatus, glutenRow, "db-yes", "Sí", statusText("db-yes", "libre de gluten"));
+      glutenColor = "db-yes"; glutenText = "Sí";
     } else if (!g.hasGluten && g.classification !== "no_info") {
-      setStatus(glutenStatus, glutenRow, "ai-yes", "Posiblemente Libre", statusText("ai-yes", "libre de gluten"));
+      glutenColor = "ai-yes"; glutenText = "Posiblemente Libre";
     } else if (g.hasGluten && g.source === 'ai') {
-      setStatus(glutenStatus, glutenRow, "ai-no", "Posiblemente NO Libre", statusText("ai-no", "libre de gluten"));
+      glutenColor = "ai-no"; glutenText = "Posiblemente NO Libre";
     } else if (g.hasGluten) {
-      setStatus(glutenStatus, glutenRow, "db-no", "No", statusText("db-no", "libre de gluten"));
+      glutenColor = "db-no"; glutenText = "No";
     } else {
-      setStatus(glutenStatus, glutenRow, "unknown", "Sin Info", statusText("unknown", "libre de gluten"));
+      glutenColor = "unknown"; glutenText = "Sin Info";
+    }
+    setStatus(glutenStatus, glutenRow, glutenColor, glutenText);
+    setupRow(glutenRow, glutenDetail, buildGlutenDetail(g));
+  }
+
+  function makeDietRow(dietVal, source, detailId, dietName, label, attrId) {
+    const statusEl = { vegan: veganStatus, vegetarian: vegStatus, kosher: kosherStatus, halal: halalStatus, organic: organicStatus, nonGmo: nonGmoStatus, noAdditives: noAdditivesStatus, palmOilFree: palmOilFreeStatus, fairTrade: fairTradeStatus }[label];
+    const rowEl = { vegan: veganRow, vegetarian: vegRow, kosher: kosherRow, halal: halalRow, organic: organicRow, nonGmo: nonGmoRow, noAdditives: noAdditivesRow, palmOilFree: palmOilFreeRow, fairTrade: fairTradeRow }[label];
+    const detailEl = { vegan: veganDetail, vegetarian: vegDetail, kosher: kosherDetail, halal: halalDetail, organic: organicDetail, nonGmo: nonGmoDetail, noAdditives: noAdditivesDetail, palmOilFree: palmOilFreeDetail, fairTrade: fairTradeDetail }[label];
+    const attrEl = document.getElementById(attrId);
+    if (dietVal === true) {
+      if (attrEl) attrEl.textContent = label === "noAdditives" ? "🧪 Sin Aditivos" : label === "palmOilFree" ? "🌴 Sin Aceite de Palma" : label === "fairTrade" ? "🤝 Comercio Justo" : label === "nonGmo" ? "🧬 Sin OGM" : label === "vegetarian" ? "🥦 Vegetariano" : label === "vegan" ? "🌱 Vegano" : label === "kosher" ? "✡️ Kosher" : label === "halal" ? "🌙 Halal" : label === "organic" ? "🌿 Orgánico" : attrEl.textContent;
+      const isDb = source === 'db';
+      const color = isDb ? 'db-yes' : 'ai-yes';
+      setStatus(statusEl, rowEl, color, isDb ? "Sí" : "Probable");
+      setupRow(rowEl, detailEl, buildDetailText(color, dietName, d[label + "Detail"] || ""));
+    } else if (dietVal === false) {
+      if (attrEl) attrEl.textContent = label === "nonGmo" ? "🧬 Con OGM" : label === "noAdditives" ? "🧪 Con Aditivos" : label === "palmOilFree" ? "🌴 Con Aceite de Palma" : label === "vegan" ? "❌ No vegano" : label === "vegetarian" ? "❌ No vegetariano" : label === "kosher" ? "❌ No kosher" : label === "halal" ? "❌ No halal" : label === "organic" ? "❌ No orgánico" : label === "fairTrade" ? "❌ No comercio justo" : attrEl.textContent;
+      const isDb = source === 'db';
+      const color = isDb ? 'db-no' : 'ai-no';
+      setStatus(statusEl, rowEl, color, isDb ? "No" : "Probable No");
+      setupRow(rowEl, detailEl, buildDetailText(color, dietName, d[label + "Detail"] || ""));
+    } else {
+      if (attrEl && ["vegan","vegetarian","kosher","halal","organic","nonGmo","noAdditives","palmOilFree","fairTrade"].includes(label)) {
+        const defaultLabels = { vegan: "🌱 Vegano", vegetarian: "🥦 Vegetariano", kosher: "✡️ Kosher", halal: "🌙 Halal", organic: "🌿 Orgánico", nonGmo: "🧬 Sin OGM", noAdditives: "🧪 Sin Aditivos", palmOilFree: "🌴 Sin Aceite de Palma", fairTrade: "🤝 Comercio Justo" };
+        attrEl.textContent = defaultLabels[label] || attrEl.textContent;
+      }
+      setStatus(statusEl, rowEl, "unknown", "Sin Info");
+      setupRow(rowEl, detailEl, buildDetailText("unknown", dietName));
     }
   }
-  // Vegan
-  if (d.vegan === true) {
-    document.getElementById("dietary-vegan-attr").textContent = "🌱 Vegano";
-    setStatus(veganStatus, veganRow, d.veganSource === 'db' ? 'db-yes' : 'ai-yes', d.veganSource === 'db' ? "Sí" : "Probable", statusText(d.veganSource === 'db' ? 'db-yes' : 'ai-yes', "vegano"));
-  } else if (d.vegan === false) {
-    document.getElementById("dietary-vegan-attr").textContent = "❌ No vegano";
-    setStatus(veganStatus, veganRow, d.veganSource === 'db' ? 'db-no' : 'ai-no', d.veganSource === 'db' ? "No" : "Probable No", statusText(d.veganSource === 'db' ? 'db-no' : 'ai-no', "vegano"));
-  } else {
-    document.getElementById("dietary-vegan-attr").textContent = "🌱 Vegano";
-    setStatus(veganStatus, veganRow, "unknown", "Sin Info", statusText("unknown", "vegano"));
-  }
-  // Vegetarian
-  if (d.vegetarian === true) {
-    setStatus(vegStatus, vegRow, d.vegetarianSource === 'db' ? 'db-yes' : 'ai-yes', d.vegetarianSource === 'db' ? "Sí" : "Probable", statusText(d.vegetarianSource === 'db' ? 'db-yes' : 'ai-yes', "vegetariano"));
-  } else {
-    setStatus(vegStatus, vegRow, "unknown", "Sin Info", statusText("unknown", "vegetariano"));
-  }
-  // Kosher
-  if (d.kosher === true) {
-    setStatus(kosherStatus, kosherRow, d.kosherSource === 'db' ? 'db-yes' : 'ai-yes', "Sí", statusText("db-yes", "kosher"));
-  } else {
-    setStatus(kosherStatus, kosherRow, "unknown", "Sin Info", statusText("unknown", "kosher"));
-  }
-  // Halal
-  if (d.halal === true) {
-    setStatus(halalStatus, halalRow, d.halalSource === 'db' ? 'db-yes' : 'ai-yes', d.halalSource === 'db' ? "Sí" : "Probable", statusText(d.halalSource === 'db' ? 'db-yes' : 'ai-yes', "halal"));
-  } else {
-    setStatus(halalStatus, halalRow, "unknown", "Sin Info", statusText("unknown", "halal"));
-  }
-  // Organic
-  if (d.organic === true) {
-    setStatus(organicStatus, organicRow, d.organicSource === 'db' ? 'db-yes' : 'ai-yes', d.organicSource === 'db' ? "Sí" : "Probable", statusText(d.organicSource === 'db' ? 'db-yes' : 'ai-yes', "orgánico"));
-  } else {
-    setStatus(organicStatus, organicRow, "unknown", "Sin Info", statusText("unknown", "orgánico"));
-  }
-  // Non-GMO
-  if (d.nonGmo === true) {
-    setStatus(nonGmoStatus, nonGmoRow, d.nonGmoSource === 'db' ? 'db-yes' : 'ai-yes', d.nonGmoSource === 'db' ? "Sí" : "Probable", statusText(d.nonGmoSource === 'db' ? 'db-yes' : 'ai-yes', "libre de OGM"));
-  } else {
-    setStatus(nonGmoStatus, nonGmoRow, "unknown", "Sin Info", statusText("unknown", "libre de OGM"));
-  }
-  // No Additives
-  if (d.noAdditives === true) {
-    setStatus(noAdditivesStatus, noAdditivesRow, d.noAdditivesSource === 'db' ? 'db-yes' : 'ai-yes', d.noAdditivesSource === 'db' ? "Sí" : "Probable", statusText(d.noAdditivesSource === 'db' ? 'db-yes' : 'ai-yes', "libre de aditivos"));
-  } else {
-    setStatus(noAdditivesStatus, noAdditivesRow, "unknown", "Sin Info", statusText("unknown", "libre de aditivos"));
-  }
-  // Palm Oil Free
-  if (d.palmOilFree === true) {
-    setStatus(palmOilFreeStatus, palmOilFreeRow, d.palmOilFreeSource === 'db' ? 'db-yes' : 'ai-yes', d.palmOilFreeSource === 'db' ? "Sí" : "Probable", statusText(d.palmOilFreeSource === 'db' ? 'db-yes' : 'ai-yes', "libre de aceite de palma"));
-  } else {
-    setStatus(palmOilFreeStatus, palmOilFreeRow, "unknown", "Sin Info", statusText("unknown", "libre de aceite de palma"));
-  }
-  // Fair Trade
-  if (d.fairTrade === true) {
-    setStatus(fairTradeStatus, fairTradeRow, d.fairTradeSource === 'db' ? 'db-yes' : 'ai-yes', d.fairTradeSource === 'db' ? "Sí" : "Probable", statusText(d.fairTradeSource === 'db' ? 'db-yes' : 'ai-yes', "de comercio justo"));
-  } else {
-    setStatus(fairTradeStatus, fairTradeRow, "unknown", "Sin Info", statusText("unknown", "de comercio justo"));
-  }
+
+  const dietMeta = [
+    { val: d.vegan, src: d.veganSource, label: "vegan", dietName: "vegano", attrId: "dietary-vegan-attr" },
+    { val: d.vegetarian, src: d.vegetarianSource, label: "vegetarian", dietName: "vegetariano", attrId: "dietary-vegetarian-attr" },
+    { val: d.kosher, src: d.kosherSource, label: "kosher", dietName: "kosher", attrId: "dietary-kosher-attr" },
+    { val: d.halal, src: d.halalSource, label: "halal", dietName: "halal", attrId: "dietary-halal-attr" },
+    { val: d.organic, src: d.organicSource, label: "organic", dietName: "orgánico", attrId: "dietary-organic-attr" },
+    { val: d.nonGmo, src: d.nonGmoSource, label: "nonGmo", dietName: "libre de OGM", attrId: "dietary-non-gmo-attr" },
+    { val: d.noAdditives, src: d.noAdditivesSource, label: "noAdditives", dietName: "libre de aditivos", attrId: "dietary-no-additives-attr" },
+    { val: d.palmOilFree, src: d.palmOilFreeSource, label: "palmOilFree", dietName: "libre de aceite de palma", attrId: "dietary-palm-oil-free-attr" },
+    { val: d.fairTrade, src: d.fairTradeSource, label: "fairTrade", dietName: "de comercio justo", attrId: "dietary-fair-trade-attr" }
+  ];
+  dietMeta.forEach(m => makeDietRow(m.val, m.src, m.label, m.dietName, m.label, m.attrId));
   if (section) section.classList.remove("hidden");
 }
 
@@ -825,20 +841,25 @@ function parseApiProduct(product) {
   const filteredTraces = tracesList.filter(t => !isGlutenRelated(t));
 
   // Dietary info with source tracking
-  const dietary = { vegan: null, vegetarian: null, kosher: null, halal: null, organic: null, nonGmo: null, noAdditives: null, palmOilFree: null, fairTrade: null, veganSource: null, vegetarianSource: null, kosherSource: null, halalSource: null, organicSource: null, nonGmoSource: null, noAdditivesSource: null, palmOilFreeSource: null, fairTradeSource: null };
+  const dietary = { vegan: null, vegetarian: null, kosher: null, halal: null, organic: null, nonGmo: null, noAdditives: null, palmOilFree: null, fairTrade: null, veganSource: null, vegetarianSource: null, kosherSource: null, halalSource: null, organicSource: null, nonGmoSource: null, noAdditivesSource: null, palmOilFreeSource: null, fairTradeSource: null, veganDetail: null, vegetarianDetail: null, kosherDetail: null, halalDetail: null, organicDetail: null, nonGmoDetail: null, noAdditivesDetail: null, palmOilFreeDetail: null, fairTradeDetail: null };
   const analysisTags = (product.ingredients_analysis_tags || []).map(t => t.toLowerCase());
-  if (labelsTags.some(t => t === 'en:vegan')) { dietary.vegan = true; dietary.veganSource = 'db'; }
-  if (labelsTags.some(t => t === 'en:vegetarian')) { dietary.vegetarian = true; dietary.vegetarianSource = 'db'; }
-  if (labelsTags.some(t => t.includes('kosher'))) { dietary.kosher = true; dietary.kosherSource = 'db'; }
-  if (analysisTags.includes('en:non-vegan')) { dietary.vegan = false; dietary.veganSource = 'db'; }
-  if (analysisTags.includes('en:vegan') && dietary.vegan !== false) { dietary.vegan = true; dietary.veganSource = 'db'; }
-  if (analysisTags.includes('en:vegetarian')) { dietary.vegetarian = true; dietary.vegetarianSource = 'db'; }
-  if (labelsTags.some(t => t === 'en:halal')) { dietary.halal = true; dietary.halalSource = 'db'; }
-  if (labelsTags.some(t => t === 'en:organic' || t === 'en:eu-organic' || t === 'en:usda-organic' || t === 'en:bio' || t === 'en:ab-agriculture-biologique' || t.includes('organic'))) { dietary.organic = true; dietary.organicSource = 'db'; }
-  if (labelsTags.some(t => t === 'en:non-gmo' || t === 'en:no-ogm' || t === 'en:without-gmo' || t === 'en:gmo-free' || t === 'en:non-gmo-project' || t.includes('without-gmo') || t.includes('non-gmo'))) { dietary.nonGmo = true; dietary.nonGmoSource = 'db'; }
-  if (labelsTags.some(t => t === 'en:no-additives' || t === 'en:additive-free' || t === 'en:without-additives' || t === 'en:no-preservatives' || t === 'en:no-artificial-additives' || t === 'en:no-artificial-colors' || t === 'en:no-artificial-flavors')) { dietary.noAdditives = true; dietary.noAdditivesSource = 'db'; }
-  if (labelsTags.some(t => t.includes('palm-oil-free') || t === 'en:no-palm-oil') || analysisTags.includes('en:palm-oil-free')) { dietary.palmOilFree = true; dietary.palmOilFreeSource = 'db'; }
-  if (labelsTags.some(t => t === 'en:fair-trade' || t === 'en:fairtrade' || t === 'en:comercio-justo' || t === 'en:fair-trade-international' || t === 'en:fair-trade-usa' || t.includes('fair-trade') || t.includes('fairtrade'))) { dietary.fairTrade = true; dietary.fairTradeSource = 'db'; }
+  if (labelsTags.some(t => t === 'en:vegan')) { dietary.vegan = true; dietary.veganSource = 'db'; dietary.veganDetail = "Etiqueta: en:vegan"; }
+  if (labelsTags.some(t => t === 'en:vegetarian')) { dietary.vegetarian = true; dietary.vegetarianSource = 'db'; dietary.vegetarianDetail = "Etiqueta: en:vegetarian"; }
+  if (labelsTags.some(t => t.includes('kosher'))) { dietary.kosher = true; dietary.kosherSource = 'db'; dietary.kosherDetail = "Etiqueta: " + labelsTags.find(t => t.includes('kosher')); }
+  if (analysisTags.includes('en:non-vegan')) { dietary.vegan = false; dietary.veganSource = 'db'; dietary.veganDetail = "Etiqueta de análisis: en:non-vegan"; }
+  if (analysisTags.includes('en:vegan') && dietary.vegan !== false) { dietary.vegan = true; dietary.veganSource = 'db'; dietary.veganDetail = "Etiqueta de análisis: en:vegan"; }
+  if (analysisTags.includes('en:vegetarian')) { dietary.vegetarian = true; dietary.vegetarianSource = 'db'; dietary.vegetarianDetail = "Etiqueta de análisis: en:vegetarian"; }
+  if (labelsTags.some(t => t === 'en:halal')) { dietary.halal = true; dietary.halalSource = 'db'; dietary.halalDetail = "Etiqueta: en:halal"; }
+  const organicTag = labelsTags.find(t => t === 'en:organic' || t === 'en:eu-organic' || t === 'en:usda-organic' || t === 'en:bio' || t === 'en:ab-agriculture-biologique' || t.includes('organic'));
+  if (organicTag) { dietary.organic = true; dietary.organicSource = 'db'; dietary.organicDetail = "Etiqueta: " + organicTag; }
+  const gmoTag = labelsTags.find(t => t === 'en:non-gmo' || t === 'en:no-ogm' || t === 'en:without-gmo' || t === 'en:gmo-free' || t === 'en:non-gmo-project' || t.includes('without-gmo') || t.includes('non-gmo'));
+  if (gmoTag) { dietary.nonGmo = true; dietary.nonGmoSource = 'db'; dietary.nonGmoDetail = "Etiqueta: " + gmoTag; }
+  const additiveTag = labelsTags.find(t => t === 'en:no-additives' || t === 'en:additive-free' || t === 'en:without-additives' || t === 'en:no-preservatives' || t === 'en:no-artificial-additives' || t === 'en:no-artificial-colors' || t === 'en:no-artificial-flavors');
+  if (additiveTag) { dietary.noAdditives = true; dietary.noAdditivesSource = 'db'; dietary.noAdditivesDetail = "Etiqueta: " + additiveTag; }
+  const palmTag = labelsTags.find(t => t.includes('palm-oil-free') || t === 'en:no-palm-oil') || (analysisTags.includes('en:palm-oil-free') ? 'en:palm-oil-free' : null);
+  if (palmTag) { dietary.palmOilFree = true; dietary.palmOilFreeSource = 'db'; dietary.palmOilFreeDetail = "Etiqueta: " + palmTag; }
+  const fairTag = labelsTags.find(t => t === 'en:fair-trade' || t === 'en:fairtrade' || t === 'en:comercio-justo' || t === 'en:fair-trade-international' || t === 'en:fair-trade-usa' || t.includes('fair-trade') || t.includes('fairtrade'));
+  if (fairTag) { dietary.fairTrade = true; dietary.fairTradeSource = 'db'; dietary.fairTradeDetail = "Etiqueta: " + fairTag; }
 
   // Mexican warning seals (NOM-051 Fase 2)
   const sellos = [];
@@ -1358,34 +1379,42 @@ function runAICheck(product) {
       if (product.dietary.vegan == null && data.dietary.vegan !== undefined) {
         product.dietary.vegan = data.dietary.vegan;
         product.dietary.veganSource = 'ai';
+        product.dietary.veganDetail = data.dietaryDetails?.vegan || null;
       }
       if (product.dietary.vegetarian == null && data.dietary.vegetarian !== undefined) {
         product.dietary.vegetarian = data.dietary.vegetarian;
         product.dietary.vegetarianSource = 'ai';
+        product.dietary.vegetarianDetail = data.dietaryDetails?.vegetarian || null;
       }
       if (product.dietary.halal == null && data.dietary.halal !== undefined) {
         product.dietary.halal = data.dietary.halal;
         product.dietary.halalSource = 'ai';
+        product.dietary.halalDetail = data.dietaryDetails?.halal || null;
       }
       if (product.dietary.organic == null && data.dietary.organic !== undefined) {
         product.dietary.organic = data.dietary.organic;
         product.dietary.organicSource = 'ai';
+        product.dietary.organicDetail = data.dietaryDetails?.organic || null;
       }
       if (product.dietary.nonGmo == null && data.dietary.nonGmo !== undefined) {
         product.dietary.nonGmo = data.dietary.nonGmo;
         product.dietary.nonGmoSource = 'ai';
+        product.dietary.nonGmoDetail = data.dietaryDetails?.nonGmo || null;
       }
       if (product.dietary.noAdditives == null && data.dietary.noAdditives !== undefined) {
         product.dietary.noAdditives = data.dietary.noAdditives;
         product.dietary.noAdditivesSource = 'ai';
+        product.dietary.noAdditivesDetail = data.dietaryDetails?.noAdditives || null;
       }
       if (product.dietary.palmOilFree == null && data.dietary.palmOilFree !== undefined) {
         product.dietary.palmOilFree = data.dietary.palmOilFree;
         product.dietary.palmOilFreeSource = 'ai';
+        product.dietary.palmOilFreeDetail = data.dietaryDetails?.palmOilFree || null;
       }
       if (product.dietary.fairTrade == null && data.dietary.fairTrade !== undefined) {
         product.dietary.fairTrade = data.dietary.fairTrade;
         product.dietary.fairTradeSource = 'ai';
+        product.dietary.fairTradeDetail = data.dietaryDetails?.fairTrade || null;
       }
       renderDietaryBadges(product);
     }
