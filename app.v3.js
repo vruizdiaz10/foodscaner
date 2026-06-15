@@ -369,8 +369,43 @@ function isGlutenRelated(label) {
   return ["gluten", "trigo", "trigo (gluten)", "cebada", "centeno", "avena"].includes(l) || l.includes("(gluten)");
 }
 
+function extractDietaryFromLabels(labelsTags) {
+  const lt = (labelsTags || []).map(t => t.toLowerCase());
+  const d = { vegan: null, vegetarian: null, kosher: null, halal: null, organic: null, nonGmo: null, noAdditives: null, palmOilFree: null, fairTrade: null };
+  if (lt.some(t => t === 'en:vegan')) { d.vegan = true; }
+  if (lt.some(t => t === 'en:vegetarian')) { d.vegetarian = true; }
+  if (lt.some(t => t.includes('kosher'))) { d.kosher = true; }
+  if (lt.some(t => t === 'en:halal')) { d.halal = true; }
+  const organicTag = lt.find(t => ['en:organic','en:eu-organic','en:usda-organic','en:bio','en:ab-agriculture-biologique'].includes(t) || t.includes('organic'));
+  if (organicTag) { d.organic = true; }
+  const gmoTag = lt.find(t => ['en:non-gmo','en:no-ogm','en:without-gmo','en:gmo-free','en:non-gmo-project'].includes(t) || t.includes('without-gmo') || t.includes('non-gmo'));
+  if (gmoTag) { d.nonGmo = true; }
+  const additiveTag = lt.find(t => ['en:no-additives','en:additive-free','en:without-additives','en:no-preservatives','en:no-artificial-additives','en:no-artificial-colors','en:no-artificial-flavors'].includes(t));
+  if (additiveTag) { d.noAdditives = true; }
+  const palmTag = lt.find(t => t.includes('palm-oil-free') || t === 'en:no-palm-oil');
+  if (palmTag) { d.palmOilFree = true; }
+  const fairTag = lt.find(t => ['en:fair-trade','en:fairtrade','en:comercio-justo','en:fair-trade-international','en:fair-trade-usa'].includes(t) || t.includes('fair-trade') || t.includes('fairtrade'));
+  if (fairTag) { d.fairTrade = true; }
+  return d;
+}
+
 function renderDietaryBadges(product) {
   const section = document.getElementById("dietary-section");
+  // Asegurar que dietary exista extrayendo desde labels del OFF si es necesario
+  if (!product.dietary) {
+    product.dietary = product.labelsTags ? extractDietaryFromLabels(product.labelsTags) : { vegan: null, vegetarian: null, kosher: null, halal: null, organic: null, nonGmo: null, noAdditives: null, palmOilFree: null, fairTrade: null };
+  } else if (product.labelsTags && !product.labelsTagsMerged) {
+    // Fill null dietary fields from labels (e.g., nonGmo from en:non-gmo-project)
+    const fromLabels = extractDietaryFromLabels(product.labelsTags);
+    product.labelsTagsMerged = true;
+    Object.keys(fromLabels).forEach(k => {
+      if (product.dietary[k] == null && fromLabels[k] != null) {
+        product.dietary[k] = fromLabels[k];
+        product.dietary[k + 'Source'] = 'db';
+        product.dietary[k + 'Detail'] = 'Etiqueta del producto';
+      }
+    });
+  }
   const d = product.dietary;
   if (!d) { if (section) section.classList.add("hidden"); return; }
   const g = product.gluten;
@@ -989,6 +1024,7 @@ function parseApiProduct(product) {
     _enrichedFrom: product._enrichedFrom || null,
     ingredientsText: product.ingredients_text || null,
     nutriments: product.nutriments || null,
+    labelsTags: product.labels_tags || null,
     dietary,
     sellos,
     notRecommended
