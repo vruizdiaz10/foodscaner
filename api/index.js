@@ -223,13 +223,12 @@ app.get('/api/product/:barcode', async (req, res) => {
       console.log(`[USDA] Saltado: código 750 (México)`);
     } else {
       async function queryUSDA(barcode) {
-        const USDA_API_KEY = "wT50TCqGVpmeEfLhVbFZNpTBU4SVgiqNOlEp1iBK";
         const ctrl = new AbortController();
         const t = setTimeout(() => ctrl.abort(), 8000);
         try {
           console.log(`[USDA] Buscando en FoodData Central: ${barcode}`);
           const response = await fetch(
-            `https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${USDA_API_KEY}`,
+            `https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${process.env.USDA_API_KEY}`,
             {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -327,11 +326,10 @@ app.get('/api/product/:barcode', async (req, res) => {
     async function enrichFromUSDA(productName, brandName) {
       if (!productName || productName === "Producto" || productName === "—" || productName === "Producto Desconocido") return null;
       const query = brandName && brandName !== "—" && brandName !== "Desconocida" ? `${productName} ${brandName}` : productName;
-      const USDA_API_KEY = "wT50TCqGVpmeEfLhVbFZNpTBU4SVgiqNOlEp1iBK";
       const ctrl = new AbortController();
       const t = setTimeout(() => ctrl.abort(), 6000);
       try {
-        const response = await fetch(`https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${USDA_API_KEY}`, {
+        const response = await fetch(`https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${process.env.USDA_API_KEY}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query, dataType: ["Branded"], pageSize: 3 }),

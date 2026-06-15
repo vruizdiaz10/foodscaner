@@ -721,13 +721,6 @@ body {
   margin-left: 6px;
 }
 
-.badge-fallback {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fcd34d;
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  margin-left: 6px;
-}
-
 .dietary-section {
   width: 100%;
   margin-top: 4px;
@@ -913,22 +906,6 @@ body {
   font-size: 1.15rem;
   font-weight: 700;
 }
-
-/* Specific Card Rules */
-/* Gluten Safe vs Gluten Contains */
-.gluten-certified {
-  color: #10b981; /* Green - max confidence */
-}
-.gluten-declared {
-  color: #f59e0b; /* Amber - no declarado libre, pero sin gluten detectado */
-}
-.gluten-detected {
-  color: #ef4444; /* Red - gluten presente */
-}
-.gluten-unknown {
-  color: #94a3b8; /* Slate-400 - no info */
-}
-
 
 
 /* Calories Indicator */

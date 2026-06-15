@@ -4,7 +4,7 @@
   "description": "Identificador Nutricional de Alimentos",
   "main": "api/index.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node api/index.js",
     "vercel-build": "echo 'Static build complete'"
   },
   "dependencies": {

@@ -262,6 +262,7 @@ npx vercel --prod --yes --token "TU_TOKEN"
 ### Variables de entorno en Vercel
 
 - `GROQ_API_KEY` — clave de la API de Groq (gratuita en console.groq.com)
+- `USDA_API_KEY` — clave de la API de USDA FoodData Central (gratuita en fdc.nal.usda.gov)
 
 ---
 
