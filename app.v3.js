@@ -952,6 +952,9 @@ function parseApiProduct(product) {
   };
 }
 
+// Format numeric value to show at most 2 decimal places, strip trailing zeros
+function fmt(n) { return n === null || n === undefined || isNaN(n) ? n : parseFloat(Number(n).toFixed(2)); }
+
 // Render dynamic results onto success screen
 function renderProductData(product, barcode) {
   if (!product.isFood) {
@@ -1022,7 +1025,7 @@ function renderProductData(product, barcode) {
   const lvlCls = (prefix, h, m, l) => ({ Alto: prefix + h, Medio: prefix + m, Moderado: prefix + m, Bajo: prefix + l, default: prefix + l });
 
   // Render Calories Card details
-  caloriesVal.querySelector(".number").textContent = product.calories.value;
+  caloriesVal.querySelector(".number").textContent = fmt(product.calories.value);
   caloriesProgress.style.width = `${product.calories.percent}%`;
   caloriesLevel.textContent = `Nivel de energía: ${product.calories.level}`;
   cardCalories.className = "analysis-card";
@@ -1033,7 +1036,7 @@ function renderProductData(product, barcode) {
   // Render Sugars Card
   if (product.sugars && product.sugars.value !== null) {
     cardSugars.classList.remove("hidden");
-    sugarsVal.textContent = product.sugars.value + " g / 100g";
+    sugarsVal.textContent = fmt(product.sugars.value) + " g / 100g";
     sugarsProgress.style.width = product.sugars.percent + "%";
     sugarsLevel.textContent = "Nivel de azúcar: " + product.sugars.level;
     cardSugars.className = "analysis-card";
@@ -1047,7 +1050,7 @@ function renderProductData(product, barcode) {
   // Render Proteins Card
   if (product.proteins && product.proteins.value !== null) {
     cardProteins.classList.remove("hidden");
-    proteinsVal.textContent = product.proteins.value + " g / 100g";
+    proteinsVal.textContent = fmt(product.proteins.value) + " g / 100g";
     proteinsProgress.style.width = product.proteins.percent + "%";
     proteinsLevel.textContent = "Nivel de proteína: " + product.proteins.level;
     cardProteins.className = "analysis-card";
@@ -1062,8 +1065,8 @@ function renderProductData(product, barcode) {
   if (cardCarbs && carbsVal && carbsProgress && carbsLevel) {
     if (product.carbohydrates && product.carbohydrates.value !== null) {
       cardCarbs.classList.remove("hidden");
-      const total = product.carbohydrates.value;
-      const fiber = product.carbohydrates.fiber;
+      const total = fmt(product.carbohydrates.value);
+      const fiber = product.carbohydrates.fiber !== null ? fmt(product.carbohydrates.fiber) : null;
       const net = fiber !== null ? Math.round((total - fiber) * 10) / 10 : total;
       const netLabel = fiber !== null ? ` (Netos: ${net}g)` : "";
       carbsVal.textContent = total + " g / 100g" + netLabel;
@@ -1275,7 +1278,7 @@ function renderProductData(product, barcode) {
       const rows = [];
       Object.keys(nutrientLabels).forEach(key => {
         if (product.nutriments.hasOwnProperty(key) && product.nutriments[key] !== null && product.nutriments[key] !== undefined) {
-          const val = product.nutriments[key];
+          const val = fmt(product.nutriments[key]);
           const unit = key.includes('kcal') ? 'kcal' : key.includes('kJ') ? 'kJ' : 'g';
           rows.push(`<tr><td>${nutrientLabels[key]}</td><td>${val} ${unit}</td></tr>`);
         }
