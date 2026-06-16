@@ -243,11 +243,15 @@ app.get('/api/product/:barcode', async (req, res) => {
     await processOFFResult(mxResult, "Open Food Facts (MX)", "OFF MX");
     if (res.headersSent) return;
 
+    const usResult = await queryOFF("us.openfoodfacts.org");
+    await processOFFResult(usResult, "Open Food Facts (USA)", "OFF USA");
+    if (res.headersSent) return;
+
     // USDA FoodData Central — only if not a 750 prefix (doesn't find MX products)
     if (barcode.startsWith("750")) {
       sourceResults.push({ source: "USDA FoodData Central", found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
       console.log(`[USDA] Saltado: código 750 (México)`);
-    } else {
+    } else if (!res.headersSent) {
       async function queryUSDA(barcode) {
         try {
           console.log(`[USDA] Buscando en FoodData Central: ${barcode}`);
