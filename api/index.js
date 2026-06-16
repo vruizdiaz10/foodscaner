@@ -181,6 +181,20 @@ async function callOpenRouter(prompt) {
   return data.choices?.[0]?.message?.content || "";
 }
 
+async function callGemini(prompt) {
+  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + process.env.GEMINI_API_KEY, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.1 } }),
+    signal: AbortSignal.timeout(10000)
+  });
+  if (response.status === 429) throw new Error("Límite de velocidad excedido en Gemini.");
+  if (!response.ok) throw new Error(`Gemini error: ${response.status}`);
+  const data = await response.json();
+  _lastAiModel = "Gemini 2.5 Flash";
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+}
+
 async function callAI(prompt, groqModel = 'llama-3.3-70b-versatile', max_tokens = 3000) {
   if (!process.env.GROQ_API_KEY) return callOpenRouter(prompt);
 
@@ -690,6 +704,9 @@ REGLAS:
         content = await callGroq(prompt, groqModel);
       } else if (provider === 'openrouter') {
         content = await callOpenRouter(prompt);
+      } else if (provider === 'gemini') {
+        if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY no configurada");
+        content = await callGemini(prompt);
       } else {
         content = await callAI(prompt);
       }

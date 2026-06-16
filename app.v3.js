@@ -1531,7 +1531,7 @@ function runAICheck(product) {
     errorEl.classList.add("hidden");
   }
 
-  // --- Ejecución secuencial: Groq 70b → Groq 8b → OpenRouter ---
+  // --- Ejecución secuencial: Groq 70b → Groq 8b → OpenRouter → Gemini 2.5 ---
   callProvider('groq&model=llama-3.3-70b-versatile', 7000)
     .then(data => {
       if (data.error) throw new Error(data.error);
@@ -1556,9 +1556,18 @@ function runAICheck(product) {
             })
             .catch(orErr => {
               addProviderLog('OpenRouter', 'fail', orErr.message);
-              loadingEl.classList.add("hidden");
-              errorEl.textContent = 'Análisis IA no disponible. Groq 70b: ' + err70.message + '. Groq 8b: ' + err8b.message + '. OpenRouter: ' + orErr.message + '. Los datos de la base de datos ya están visibles.';
-              errorEl.classList.remove("hidden");
+              return callProvider('gemini', 14000)
+                .then(data => {
+                  if (data.error) throw new Error(data.error);
+                  addProviderLog('Gemini 2.5', 'ok', 'gemini-2.5-flash');
+                  processAIResult(data);
+                })
+                .catch(gemErr => {
+                  addProviderLog('Gemini 2.5', 'fail', gemErr.message);
+                  loadingEl.classList.add("hidden");
+                  errorEl.textContent = 'Análisis IA no disponible. Groq 70b: ' + err70.message + '. Groq 8b: ' + err8b.message + '. OpenRouter: ' + orErr.message + '. Gemini: ' + gemErr.message + '. Los datos de la base de datos ya están visibles.';
+                  errorEl.classList.remove("hidden");
+                });
             });
         });
     });
