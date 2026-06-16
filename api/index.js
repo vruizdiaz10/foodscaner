@@ -66,15 +66,17 @@ async function getCacheEntry(barcode) {
   return fire;
 }
 
-function setCacheEntry(barcode, response, source, offLastModified = null) {
+async function setCacheEntry(barcode, response, source, offLastModified = null) {
   const now = Math.floor(Date.now() / 1000);
   memoryCache[barcode] = { response, source, offLastModified, cachedAt: now };
-  fireSetCache(barcode, response, source, offLastModified);
+  // Awaited (no fire-and-forget): en serverless, la función puede congelarse
+  // justo después de res.json(), matando promesas pendientes y perdiendo la escritura.
+  await fireSetCache(barcode, response, source, offLastModified);
 }
 
-function removeCacheEntry(barcode) {
+async function removeCacheEntry(barcode) {
   delete memoryCache[barcode];
-  fireRemoveCache(barcode);
+  await fireRemoveCache(barcode);
 }
 
 async function getAiCacheEntry(key) {
@@ -89,9 +91,9 @@ async function getAiCacheEntry(key) {
   return entry.response;
 }
 
-function setAiCacheEntry(key, response) {
+async function setAiCacheEntry(key, response) {
   memoryAiCache[key] = { response, cachedAt: Math.floor(Date.now() / 1000) };
-  fireSetAiCache(key, response);
+  await fireSetAiCache(key, response);
 }
 
 // Lightweight OFF freshness check: fetch only last_modified_t (tiny payload)
@@ -219,7 +221,7 @@ app.get('/api/product/:barcode', async (req, res) => {
         return res.json(cached.response);
       }
 
-      removeCacheEntry(barcode);
+      await removeCacheEntry(barcode);
     }
 
     // ----- FULL QUERY (cache miss or stale) -----
@@ -239,7 +241,7 @@ app.get('/api/product/:barcode', async (req, res) => {
       return !!(p.ingredients_text || (p.allergens_tags && p.allergens_tags.length > 0) || p.allergens_from_ingredients || (p.traces && p.traces !== "undefined"));
     }
 
-    function processOFFResult(result, sourceLabel, labelShort) {
+    async function processOFFResult(result, sourceLabel, labelShort) {
       if (!result) {
         sourceResults.push({ source: sourceLabel, found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
         return;
@@ -254,7 +256,7 @@ app.get('/api/product/:barcode', async (req, res) => {
       if (hd) {
         const respData = { ...result, sourceLabel, sourceResults };
         const lastMod = result.product.last_modified_t || null;
-        setCacheEntry(barcode, respData, sourceLabel, lastMod);
+        await setCacheEntry(barcode, respData, sourceLabel, lastMod);
         return res.json(respData);
       }
       if (!bestResult) {
@@ -270,11 +272,11 @@ app.get('/api/product/:barcode', async (req, res) => {
     const sourceResults = [];
 
     const worldResult = await queryOFF("world.openfoodfacts.org");
-    let worldReturned = processOFFResult(worldResult, "Open Food Facts (Mundial)", "OFF World");
+    let worldReturned = await processOFFResult(worldResult, "Open Food Facts (Mundial)", "OFF World");
     if (worldReturned !== undefined) return;
 
     const mxResult = await queryOFF("mx.openfoodfacts.org");
-    let mxReturned = processOFFResult(mxResult, "Open Food Facts (MX)", "OFF MX");
+    let mxReturned = await processOFFResult(mxResult, "Open Food Facts (MX)", "OFF MX");
     if (mxReturned !== undefined) return;
 
     // USDA FoodData Central — only if not a 750 prefix (doesn't find MX products)
@@ -362,7 +364,7 @@ app.get('/api/product/:barcode', async (req, res) => {
         const ni = (p.calories && p.calories.value > 0) ? p.calories.value + " kcal/100g" : "Sin datos";
         sourceResults.push({ source: "USDA FoodData Central", found: true, productName: pn, brandName: bn, allergenInfo: ai, nutritionInfo: ni });
         const respData = { ...usdaResult, sourceResults };
-        setCacheEntry(barcode, respData, "USDA FoodData Central", null);
+        await setCacheEntry(barcode, respData, "USDA FoodData Central", null);
         return res.json(respData);
       } else {
         sourceResults.push({ source: "USDA FoodData Central", found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
@@ -561,7 +563,7 @@ app.get('/api/product/:barcode', async (req, res) => {
         }
       }
       const respData = { ...bestResult, sourceResults };
-      setCacheEntry(barcode, respData, bestSource, bestLastModified);
+      await setCacheEntry(barcode, respData, bestSource, bestLastModified);
       return res.json(respData);
     }
     if (fallbackResult) {
@@ -587,7 +589,7 @@ app.get('/api/product/:barcode', async (req, res) => {
         fallbackResult.product._enrichedFrom = "USDA (por nombre)";
       }
       const respData = { ...fallbackResult, sourceResults };
-      setCacheEntry(barcode, respData, "UpcItemDb", null);
+      await setCacheEntry(barcode, respData, "UpcItemDb", null);
       return res.json(respData);
     }
 
@@ -609,7 +611,7 @@ app.get('/api/product/:barcode', async (req, res) => {
         if (enrichment.saturatedFat != null) gp.nutriments['saturated-fat_100g'] = enrichment.saturatedFat;
         if (enrichment.sodium != null) gp.nutriments['sodium_100g'] = Math.round(enrichment.sodium) / 1000;
         const respData = { status: 1, source: 'local', sourceLabel: 'Groq + USDA', product: gp, sourceResults };
-        setCacheEntry(barcode, respData, "Groq+USDA", null);
+        await setCacheEntry(barcode, respData, "Groq+USDA", null);
         return res.json(respData);
       }
     }
@@ -720,6 +722,10 @@ REGLAS:
       return res.status(502).json({ error: "No se pudo parsear la respuesta JSON", raw: content });
     }
 
+    // No se espera (fire-and-forget): esta respuesta compite contra el timeout
+    // del proveedor en el frontend (7-14s según el proveedor); esperar la
+    // escritura a Firestore aquí empuja la respuesta más allá de ese timeout
+    // y provoca aborts ("signal is aborted without reason").
     res.json(parsed);
     setAiCacheEntry(cacheKey, parsed);
   } catch (err) {
@@ -727,8 +733,8 @@ REGLAS:
   }
 });
 
-app.delete('/api/cache/:barcode', (req, res) => {
-  removeCacheEntry(req.params.barcode);
+app.delete('/api/cache/:barcode', async (req, res) => {
+  await removeCacheEntry(req.params.barcode);
   res.json({ ok: true, message: "Caché eliminado para " + req.params.barcode });
 });
 
