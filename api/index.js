@@ -161,7 +161,7 @@ async function callGroq(prompt, model = 'llama-3.3-70b-versatile', max_tokens = 
   if (response.status === 429) throw new Error("Límite de velocidad excedido en Groq.");
   if (!response.ok) throw new Error(`Groq error: ${response.status}`);
   const data = await response.json();
-  _lastAiModel = "Groq (llama-3.3-70b)";
+  _lastAiModel = "Groq: " + model;
   return data.choices?.[0]?.message?.content || "";
 }
 

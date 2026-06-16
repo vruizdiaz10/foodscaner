@@ -1333,10 +1333,11 @@ function runAICheck(product) {
   loadingEl.classList.remove("hidden");
   errorEl.classList.add("hidden");
 
-  function addProviderLog(provider, status, msg) {
+  function addProviderLog(provider, status, msg, raw) {
     const entry = document.createElement("div");
     entry.className = "provider-entry";
     entry.innerHTML = `<span class="status-dot ${status}"></span><span class="provider-name">${provider}</span> ${msg}`;
+    if (raw) entry.title = raw;
     providerLogEl.appendChild(entry);
   }
 
@@ -1539,7 +1540,7 @@ function runAICheck(product) {
       processAIResult(data);
     })
     .catch(err70 => {
-      addProviderLog('Groq 70b', 'fail', err70.message);
+      addProviderLog('Groq 70b', 'fail', err70.message, err70.toString());
       return callProvider('groq&model=llama-3.1-8b-instant', 7000)
         .then(data => {
           if (data.error) throw new Error(data.error);
@@ -1547,7 +1548,7 @@ function runAICheck(product) {
           processAIResult(data);
         })
         .catch(err8b => {
-          addProviderLog('Groq 8b', 'fail', err8b.message);
+          addProviderLog('Groq 8b', 'fail', err8b.message, err8b.toString());
           return callProvider('openrouter', 12000)
             .then(data => {
               if (data.error) throw new Error(data.error);
@@ -1555,7 +1556,7 @@ function runAICheck(product) {
               processAIResult(data);
             })
             .catch(orErr => {
-              addProviderLog('OpenRouter', 'fail', orErr.message);
+              addProviderLog('OpenRouter', 'fail', orErr.message, orErr.toString());
               return callProvider('gemini', 14000)
                 .then(data => {
                   if (data.error) throw new Error(data.error);
@@ -1563,7 +1564,7 @@ function runAICheck(product) {
                   processAIResult(data);
                 })
                 .catch(gemErr => {
-                  addProviderLog('Gemini 2.5', 'fail', gemErr.message);
+                  addProviderLog('Gemini 2.5', 'fail', gemErr.message, gemErr.toString());
                   loadingEl.classList.add("hidden");
                   errorEl.textContent = 'Análisis IA no disponible. Groq 70b: ' + err70.message + '. Groq 8b: ' + err8b.message + '. OpenRouter: ' + orErr.message + '. Gemini: ' + gemErr.message + '. Los datos de la base de datos ya están visibles.';
                   errorEl.classList.remove("hidden");
