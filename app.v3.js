@@ -780,6 +780,16 @@ function parseApiProduct(product) {
   const filteredAllergens = allergensList.filter(a => !isGlutenRelated(a));
   const filteredTraces = tracesList.filter(t => !isGlutenRelated(t));
 
+  // Name-based allergen fallback: cuando OFF no tiene datos, inferir del nombre/categoría
+  const hasOFFAllergens = allergensList.length > 0 || !!(product.allergens_tags?.length || product.allergens_from_ingredients || ingredientsText);
+  if (!hasOFFAllergens) {
+    const allText = (product.product_name + " " + (product.categories || "")).toLowerCase();
+    const fishKW = ["sardina", "atún", "salmón", "sardine", "tuna", "salmon", "anchova", "boquerón", "caballa", "merluza", "bacalao", "pescado", "fish"];
+    if (fishKW.some(k => allText.includes(k)) && !filteredAllergens.some(a => a.includes("Pescado"))) {
+      filteredAllergens.push("Pescado");
+    }
+  }
+
   // Dietary info with source tracking
   const dietary = { vegan: null, vegetarian: null, kosher: null, halal: null, organic: null, nonGmo: null, noAdditives: null, palmOilFree: null, fairTrade: null, veganSource: null, vegetarianSource: null, kosherSource: null, halalSource: null, organicSource: null, nonGmoSource: null, noAdditivesSource: null, palmOilFreeSource: null, fairTradeSource: null, veganDetail: null, vegetarianDetail: null, kosherDetail: null, halalDetail: null, organicDetail: null, nonGmoDetail: null, noAdditivesDetail: null, palmOilFreeDetail: null, fairTradeDetail: null };
   const analysisTags = (product.ingredients_analysis_tags || []).map(t => t.toLowerCase());

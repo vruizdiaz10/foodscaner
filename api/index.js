@@ -636,7 +636,7 @@ REGLAS ESTRICTAS:
 - Distingue entre "contiene gluten como ingrediente" (hasGluten: true) y "puede contener trazas" (hasGluten: false, menciónalo en notes).
 - SI TIENES DUDAS, usa confidence "baja" y explica en notes.
 - No inventes ingredientes. Si la lista de ingredientes no contiene algo, no lo incluyas en tu análisis.
-- No incluyas gluten ni cereales con gluten (trigo, cebada, centeno, avena) en la lista de alérgenos, ya que el gluten se analiza en un campo separado.
+- ALÉRGENOS: Detecta alérgenos de la lista de ingredientes SIEMPRE que sea posible. Si no hay ingredientes, infiere alérgenos OBVIOS del nombre del producto (ej: "Sardinas" → incluye "Pescado", "Leche" → incluye "Lácteos", "Pan" → incluye "Trigo"). No incluyas gluten ni cereales con gluten en la lista de alérgenos.
 - DIABETES: risk debe ser "bajo", "medio" o "alto" según la cantidad de azúcares por 100g, carbohidratos totales, y fibra (la fibra mitiga el impacto). Usa las tablas de referencia de la OMS: bajo ≤5g sólidos / ≤2.5g bebidas, alto >22.5g sólidos / >11.25g bebidas.
 - DIABETES: glycemicImpact debe estimar si el producto tiene índice glucémico bajo, medio o alto según ingredientes, presencia de fibra y tipo de carbohidratos.
 - DIABETES: Si no hay datos de azúcares ni carbohidratos, usa riesgo "bajo" con confidence "baja" y explain en notes.
