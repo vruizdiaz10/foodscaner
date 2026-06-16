@@ -1072,23 +1072,23 @@ function renderProductData(product, barcode) {
       ingredientsTextEl.textContent = product.ingredientsText;
       ingredientsSection.classList.remove("hidden");
       if (ocrRequestSection) ocrRequestSection.classList.add("hidden");
+      // Show grid for ingredients
+      if (analysisGrid) analysisGrid.classList.remove("hidden");
     } else {
       ingredientsSection.classList.add("hidden");
       if (ocrRequestSection) {
         ocrRequestSection.classList.remove("hidden");
         const ocrBtn = document.getElementById("btn-ocr-ingredients");
         if (ocrBtn) ocrBtn.onclick = () => showOcrModal(currentBarcode);
+        // IMPORTANT: Show grid to display OCR button
+        if (analysisGrid) analysisGrid.classList.remove("hidden");
       }
     }
   }
 
   if (product.isFromFallback && !product._enrichedFrom) {
-    // Only hide grid if there are no ingredients to show (neither real nor OCR button)
-    if (!product.ingredientsText) {
-      analysisGrid.classList.add("hidden");
-    } else {
-      analysisGrid.classList.remove("hidden");
-    }
+    // Grid visibility is now controlled by ingredients rendering above
+    // Don't force hide it here - ingredients/OCR button may be shown
     noNutritionAlert.classList.remove("hidden");
     renderHypertensionCard(product);
     renderCholesterolCard(product);
@@ -1096,6 +1096,9 @@ function renderProductData(product, barcode) {
     runAICheck(product, barcode);
     return;
   }
+
+  analysisGrid.classList.remove("hidden");
+  noNutritionAlert.classList.add("hidden");
 
   analysisGrid.classList.remove("hidden");
   noNutritionAlert.classList.add("hidden");
