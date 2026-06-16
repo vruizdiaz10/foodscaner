@@ -1549,3 +1549,29 @@ body {
   padding: 16px 0;
   margin-top: auto;
 }
+
+.ai-provider-log {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.ai-provider-log .provider-entry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+.ai-provider-log .provider-entry .status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ai-provider-log .provider-entry .status-dot.ok { background: #22c55e; }
+.ai-provider-log .provider-entry .status-dot.fail { background: #ef4444; }
+.ai-provider-log .provider-entry .provider-name { font-weight: 600; color: var(--text-primary); }

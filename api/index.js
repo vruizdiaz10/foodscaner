@@ -681,8 +681,18 @@ REGLAS:
 - No inventes ingredientes`;
 
   try {
+    const provider = req.query.provider || 'all';
     let content;
-    try { content = await callAI(prompt); }
+    try {
+      if (provider === 'groq') {
+        if (!process.env.GROQ_API_KEY) throw new Error("GROQ_API_KEY no configurada");
+        content = await callGroq(prompt);
+      } else if (provider === 'openrouter') {
+        content = await callOpenRouter(prompt);
+      } else {
+        content = await callAI(prompt);
+      }
+    }
     catch (e) {
       return res.json({ error: "Análisis IA no disponible: " + e.message + " Los datos de la base de datos ya están visibles." });
     }

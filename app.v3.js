@@ -1325,84 +1325,61 @@ function runAICheck(product) {
 
   const loadingEl = document.getElementById("ai-loading");
   const errorEl = document.getElementById("ai-error");
-  if (!loadingEl || !errorEl) return;
+  const providerLogEl = document.getElementById("ai-provider-log");
+  if (!loadingEl || !errorEl || !providerLogEl) return;
 
+  providerLogEl.innerHTML = '';
+  providerLogEl.classList.remove("hidden");
   loadingEl.classList.remove("hidden");
   errorEl.classList.add("hidden");
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 20000);
+  function addProviderLog(provider, status, msg) {
+    const entry = document.createElement("div");
+    entry.className = "provider-entry";
+    entry.innerHTML = `<span class="status-dot ${status}"></span><span class="provider-name">${provider}</span> ${msg}`;
+    providerLogEl.appendChild(entry);
+  }
 
-  fetch('/api/ai-query', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      name: product.name,
-      brand: product.brand,
-      ingredients: product.ingredientsText || null,
-      allergens: product.allergens || null,
-      sugars: product.sugars?.value ?? null,
-      carbohydrates: product.carbohydrates?.value ?? null,
-      fiber: product.carbohydrates?.fiber ?? null,
-      isBeverage: product.isBeverage ?? null,
-      dietary: product.dietary ?? null
-    }),
-    signal: controller.signal
-  })
-  .then(r => { clearTimeout(timeoutId); return r.json(); })
-  .then(data => {
+  function callProvider(provider, timeout) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    return fetch('/api/ai-query?provider=' + provider, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: product.name,
+        brand: product.brand,
+        ingredients: product.ingredientsText || null,
+        allergens: product.allergens || null,
+        sugars: product.sugars?.value ?? null,
+        carbohydrates: product.carbohydrates?.value ?? null,
+        fiber: product.carbohydrates?.fiber ?? null,
+        isBeverage: product.isBeverage ?? null,
+        dietary: product.dietary ?? null
+      }),
+      signal: controller.signal
+    }).then(r => { clearTimeout(id); return r.json(); });
+  }
+
+  function processAIResult(data) {
     loadingEl.classList.add("hidden");
-    if (data.error) {
-      errorEl.textContent = "Error: " + (data.details || data.error);
-      errorEl.classList.remove("hidden");
-      return;
-    }
+    errorEl.classList.add("hidden");
+    if (data.error) throw new Error(data.error);
 
-    // Merge AI dietary data with OFF data (AI fills gaps when OFF is null)
+    // Merge AI dietary data with OFF data
     if (data.dietary && product.dietary) {
-      if (product.dietary.vegan == null && data.dietary.vegan !== undefined) {
-        product.dietary.vegan = data.dietary.vegan;
-        product.dietary.veganSource = 'ai';
-        product.dietary.veganDetail = data.dietaryDetails?.vegan || null;
-      }
-      if (product.dietary.vegetarian == null && data.dietary.vegetarian !== undefined) {
-        product.dietary.vegetarian = data.dietary.vegetarian;
-        product.dietary.vegetarianSource = 'ai';
-        product.dietary.vegetarianDetail = data.dietaryDetails?.vegetarian || null;
-      }
-      if (product.dietary.halal == null && data.dietary.halal !== undefined) {
-        product.dietary.halal = data.dietary.halal;
-        product.dietary.halalSource = 'ai';
-        product.dietary.halalDetail = data.dietaryDetails?.halal || null;
-      }
-      if (product.dietary.organic == null && data.dietary.organic !== undefined) {
-        product.dietary.organic = data.dietary.organic;
-        product.dietary.organicSource = 'ai';
-        product.dietary.organicDetail = data.dietaryDetails?.organic || null;
-      }
-      if (product.dietary.nonGmo == null && data.dietary.nonGmo !== undefined) {
-        product.dietary.nonGmo = data.dietary.nonGmo;
-        product.dietary.nonGmoSource = 'ai';
-        product.dietary.nonGmoDetail = data.dietaryDetails?.nonGmo || null;
-      }
-      if (product.dietary.noAdditives == null && data.dietary.noAdditives !== undefined) {
-        product.dietary.noAdditives = data.dietary.noAdditives;
-        product.dietary.noAdditivesSource = 'ai';
-        product.dietary.noAdditivesDetail = data.dietaryDetails?.noAdditives || null;
-      }
-      if (product.dietary.palmOilFree == null && data.dietary.palmOilFree !== undefined) {
-        product.dietary.palmOilFree = data.dietary.palmOilFree;
-        product.dietary.palmOilFreeSource = 'ai';
-        product.dietary.palmOilFreeDetail = data.dietaryDetails?.palmOilFree || null;
-      }
-      if (product.dietary.fairTrade == null && data.dietary.fairTrade !== undefined) {
-        product.dietary.fairTrade = data.dietary.fairTrade;
-        product.dietary.fairTradeSource = 'ai';
-        product.dietary.fairTradeDetail = data.dietaryDetails?.fairTrade || null;
-      }
+      const fields = ['vegan','vegetarian','halal','organic','nonGmo','noAdditives','palmOilFree','fairTrade'];
+      fields.forEach(f => {
+        if (product.dietary[f] == null && data.dietary[f] !== undefined) {
+          product.dietary[f] = data.dietary[f];
+          product.dietary[f + 'Source'] = 'ai';
+          product.dietary[f + 'Detail'] = data.dietaryDetails?.[f] || null;
+        }
+      });
       renderDietaryBadges(product);
     }
-    // Merge AI notRecommended data (append any AI-discovered groups not already in OFF detection)
+
+    // Merge AI notRecommended
     if (data.notRecommended && Array.isArray(data.notRecommended) && product.notRecommended) {
       data.notRecommended.forEach(aiItem => {
         const reason = (aiItem.razon || '').toLowerCase();
@@ -1411,7 +1388,6 @@ function runAICheck(product) {
           product.notRecommended.push({ icon: "🤖", grupo: aiItem.grupo, razon: aiItem.razon, certain: false });
         }
       });
-      // Re-render not-recommended section
       const cardNotRec = document.getElementById("card-not-recommended");
       const notRecContainer = document.getElementById("not-recommended-container");
       if (cardNotRec && notRecContainer) {
@@ -1427,7 +1403,7 @@ function runAICheck(product) {
       }
     }
 
-    // Merge AI allergens into the main allergens section (with visual indicator)
+    // Merge AI allergens
     if (data.allergens && Array.isArray(data.allergens)) {
       const allKnown = [
         ...(product.allergens || []),
@@ -1446,10 +1422,7 @@ function runAICheck(product) {
       const aiOnly = aiAll.filter(a => !matchesKnown(a));
       if (aiOnly.length > 0) {
         product.aiAllergens = aiOnly;
-
         const gridEl = document.getElementById("allergen-icon-grid");
-
-        // Si no había datos declarados, poblar el grid con items seguros
         if (product.allergensDataAvailable === false) {
           const legendEl = document.querySelector(".allergen-legend");
           if (gridEl) {
@@ -1464,8 +1437,6 @@ function runAICheck(product) {
           }
           if (legendEl) legendEl.classList.remove("hidden");
         }
-
-        // Actualizar icon grid: items seguros que AI sugiere → ai-suggested
         if (gridEl) {
           COMMON_ALLERGENS.forEach(item => {
             const matchesAI = item.match.some(m => aiOnly.some(a => a.includes(m)));
@@ -1487,8 +1458,6 @@ function runAICheck(product) {
             }
           });
         }
-
-        // Agregar badge IA a la leyenda si no existe
         const legendEl = document.querySelector(".allergen-legend");
         if (legendEl && !legendEl.querySelector(".legend-item-ai")) {
           const aiLegend = document.createElement("span");
@@ -1496,12 +1465,12 @@ function runAICheck(product) {
           aiLegend.innerHTML = '<span class="dot dot-purple"></span> Sugerido por IA';
           legendEl.appendChild(aiLegend);
         }
-
-        // Text tags para alérgenos no comunes sugeridos por IA
         const knownMatchLabels = COMMON_ALLERGENS.flatMap(i => i.match);
         const extraAI = aiOnly.filter(a => !knownMatchLabels.some(m => a.includes(m)));
+        const allergensList = document.getElementById("allergens-list");
         if (extraAI.length > 0) {
-          allergensSafeMsg.classList.add("hidden");
+          const allergensSafeMsg = document.getElementById("allergens-safe-msg");
+          if (allergensSafeMsg) allergensSafeMsg.classList.add("hidden");
           extraAI.forEach(allergen => {
             const iconKey = Object.keys(EXTRA_ALLERGEN_ICONS).find(k => allergen.includes(k));
             const icon = iconKey ? EXTRA_ALLERGEN_ICONS[iconKey] : "🤖";
@@ -1516,12 +1485,10 @@ function runAICheck(product) {
       }
     }
 
-    // Poblar widget de diabetes en el analysis grid
-    if (data.diabetes) {
-      renderDiabetesCard(data.diabetes);
-    }
+    // Diabetes card
+    if (data.diabetes) renderDiabetesCard(data.diabetes);
 
-    // Merge AI gluten data into dietary badges (fills gaps when no DB data)
+    // Merge AI gluten
     if (data.gluten && product.gluten) {
       if (product.gluten.dataAvailable === false || product.gluten.classification === "no_info") {
         product.gluten.hasGluten = data.gluten.hasGluten;
@@ -1533,20 +1500,15 @@ function runAICheck(product) {
       }
     }
 
-    // Poblar widget de confianza (semáforo)
+    // Confidence widget
     const confidenceEl = document.getElementById("confidence-ai");
     const aiLevelEl = document.getElementById("confidence-ai-level");
     if (data.confidence && confidenceEl && aiLevelEl) {
       let level = (data.confidence || "").toLowerCase();
-      let note = "";
-      // Si no hay lista de ingredientes, forzar confianza baja (la IA solo puede basarse en conocimiento general)
-      if (!product.ingredientsText) {
-        level = "baja";
-        note = " — Sin lista de ingredientes";
-      }
+      if (!product.ingredientsText) { level = "baja"; }
       const emojis = { alta: "🟢", media: "🟡", baja: "🔴" };
       const labels = { alta: "Alta", media: "Media", baja: "Baja" };
-      aiLevelEl.innerHTML = `${emojis[level] || "⚪"} ${labels[level] || data.confidence || "N/A"}${note}`;
+      aiLevelEl.innerHTML = `${emojis[level] || "⚪"} ${labels[level] || data.confidence || "N/A"}`;
       aiLevelEl.className = "confidence-ai-level confidence-ai-" + (level === "alta" ? "alta" : level === "media" ? "media" : "baja");
       confidenceEl.classList.remove("hidden");
     }
@@ -1558,7 +1520,6 @@ function runAICheck(product) {
         : (data.notes || "");
       notesEl.classList.remove("hidden");
     }
-
     const modelEl = document.getElementById("confidence-model");
     const modelTextEl = document.getElementById("confidence-model-text");
     if (modelEl && modelTextEl && data._model) {
@@ -1566,15 +1527,32 @@ function runAICheck(product) {
       modelEl.classList.remove("hidden");
     }
 
-    // Ocultar loading y error
     loadingEl.classList.add("hidden");
     errorEl.classList.add("hidden");
-  })
-  .catch(err => {
-    loadingEl.classList.add("hidden");
-    errorEl.textContent = "Error de conexión: " + err.message;
-    errorEl.classList.remove("hidden");
-  });
+  }
+
+  // --- Ejecución secuencial: Groq → OpenRouter ---
+  callProvider('groq', 7000)
+    .then(data => {
+      if (data.error) throw new Error(data.error);
+      addProviderLog('Groq', 'ok', 'llama-3.3-70b-versatile');
+      processAIResult(data);
+    })
+    .catch(groqErr => {
+      addProviderLog('Groq', 'fail', groqErr.message);
+      return callProvider('openrouter', 12000)
+        .then(data => {
+          if (data.error) throw new Error(data.error);
+          addProviderLog('OpenRouter', 'ok', 'openrouter/free');
+          processAIResult(data);
+        })
+        .catch(orErr => {
+          addProviderLog('OpenRouter', 'fail', orErr.message);
+          loadingEl.classList.add("hidden");
+          errorEl.textContent = 'Análisis IA no disponible. Groq: ' + groqErr.message + '. OpenRouter: ' + orErr.message + '. Los datos de la base de datos ya están visibles.';
+          errorEl.classList.remove("hidden");
+        });
+    });
 }
 
 function showDBDisclaimer(product) {
