@@ -123,6 +123,40 @@ function detectGluten(...texts) {
   return { hasGluten: detected.length > 0, detected };
 }
 
+// --- AI Helpers (Groq + Gemini fallback) ---
+async function callGroq(prompt, model = 'llama-3.3-70b-versatile', max_tokens = 3000) {
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], temperature: 0.1, max_tokens }),
+    signal: AbortSignal.timeout(15000)
+  });
+  if (!response.ok) throw new Error(`Groq error: ${response.status}`);
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || "";
+}
+
+async function callGemini(prompt) {
+  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${process.env.GEMINI_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'gemini-1.5-flash', messages: [{ role: 'user', content: prompt }], temperature: 0.1 }),
+    signal: AbortSignal.timeout(15000)
+  });
+  if (!response.ok) throw new Error(`Gemini error: ${response.status}`);
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || "";
+}
+
+async function callAI(prompt, groqModel = 'llama-3.3-70b-versatile', max_tokens = 3000) {
+  try { return await callGroq(prompt, groqModel, max_tokens); }
+  catch (e) {
+    if (!process.env.GEMINI_API_KEY) throw e;
+    try { return await callGemini(prompt); }
+    catch (e2) { throw e2; }
+  }
+}
+
 // --- Product Search ---
 app.get('/api/product/:barcode', async (req, res) => {
   try {
@@ -453,23 +487,14 @@ app.get('/api/product/:barcode', async (req, res) => {
       }
     }
 
-    async function identifyViaGroq(barcode) {
+    async function identifyViaAI(barcode) {
       const prompt = `Eres un experto en identificación de productos por código de barras. El código de barras es: ${barcode}. Basado en tu conocimiento, responde ÚNICAMENTE con un objeto JSON válido sin explicaciones: { "name": "nombre del producto", "brand": "marca", "known": true }. Si NO conoces el producto, responde: { "name": "", "brand": "", "known": false }.`;
       try {
-        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: prompt }], temperature: 0.1, max_tokens: 150 }),
-          signal: AbortSignal.timeout(10000)
-        });
-        if (response.ok) {
-          const data = await response.json();
-          const content = data.choices?.[0]?.message?.content || "";
-          const match = content.match(/\{.*\}/s);
-          if (match) {
-            const parsed = JSON.parse(match[0]);
-            if (parsed.known && parsed.name && parsed.name !== "Producto") return parsed;
-          }
+        const content = await callAI(prompt, 'llama-3.3-70b-versatile', 150);
+        const match = content.match(/\{.*\}/s);
+        if (match) {
+          const parsed = JSON.parse(match[0]);
+          if (parsed.known && parsed.name && parsed.name !== "Producto") return parsed;
         }
       } catch (e) {}
       return null;
@@ -540,7 +565,7 @@ app.get('/api/product/:barcode', async (req, res) => {
 
     // Último recurso: identificar vía Groq + USDA
     sourceResults.push({ source: "Groq (IA)", found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
-    const groqId = await identifyViaGroq(barcode);
+    const groqId = await identifyViaAI(barcode);
     if (groqId) {
       sourceResults[sourceResults.length - 1] = { source: "Groq (IA)", found: true, productName: groqId.name, brandName: groqId.brand, allergenInfo: "Consultando USDA...", nutritionInfo: "Consultando USDA..." };
       const enrichment = await enrichFromUSDA(groqId.name, groqId.brand);
@@ -646,27 +671,9 @@ REGLAS ESTRICTAS:
 - NOTRECOMMENDED: Devuelve SOLO grupos que NO son recomendables para este producto (porque contienen un ingrediente problemático). NUNCA incluyas grupos para los que el producto sea apto o que "no aplican". Si un grupo no aplica, no lo incluyas. Si ningún grupo aplica, devuelve array vacío. Ejemplo correcto: {"grupo": "Niños", "razon": "Contiene cafeína"}. Ejemplo INCORRECTO: {"grupo": "Fenilcetonúricos", "razon": "No aplica, no contiene aspartame"} — esto NO debe incluirse.`;
 
   try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.1
-      })
-    });
+    const content = await callAI(prompt);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      return res.status(502).json({ error: "Error de Groq", details: errorText });
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) return res.status(502).json({ error: "Respuesta vacía de Groq" });
+    if (!content) return res.status(502).json({ error: "Respuesta vacía de la IA" });
 
     let parsed;
     try {
