@@ -181,11 +181,7 @@ async function callOpenRouter(prompt) {
 }
 
 async function callAI(prompt, groqModel = 'llama-3.3-70b-versatile', max_tokens = 3000) {
-  // Saltar Groq si no hay key configurada
-  if (process.env.GROQ_API_KEY) {
-    try { return await callGroq(prompt, groqModel, max_tokens); }
-    catch (e) { /* fall through to OpenRouter */ }
-  }
+  // Groq consistently rate-limited (429). Ir directo a OpenRouter con máximo tiempo disponible.
   return await callOpenRouter(prompt);
 }
 
