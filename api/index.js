@@ -686,7 +686,7 @@ Responde SOLO JSON sin markdown:
 REGLAS:
 - Gluten: true SOLO si ingredientes contienen trigo/avena/cebada/centeno explícitamente
 - Sin ingredientes → basa en conocimiento general, confidence "baja"
-- Alérgenos: detecta de ingredientes. Si no hay, infiere obvios del nombre (Sardinas→Pescado). No incluyas gluten aquí
+- Alérgenos: SOLO si ingredientes/nombre contiene el alérgeno explícito (Sardinas→Pescado). No inventes de marcas
 - Diabetes: usa OMS (bajo ≤5g azúcar sólidos / ≤2.5g bebidas, alto >22.5g / >11.25g). Fibra reduce impacto
 - Dietary: analiza contra ingredientes. vegan=sin origen animal, halal=sin cerdo/alcohol, nonGmo=sin OGM, noAdditives=sin aditivos, palmOilFree=sin aceite palma, fairTrade=solo si nombre/marca lo indica
 - DietaryDetails: explica cada campo mencionando ingredientes concretos que justifiquen la decisión
