@@ -13,8 +13,6 @@ const limiter = rateLimit({ windowMs: 60000, max: 30, message: { error: "Demasia
 app.use('/api/', limiter);
 
 const DB_PATH = '/tmp/local_mexican_products.json';
-const CACHE_PATH = '/tmp/foodscaner_cache.json';
-const AI_CACHE_PATH = '/tmp/foodscaner_ai_cache.json';
 
 const CANDIDATES = [
   path.join(__dirname, '..', 'local_mexican_products.json'),
@@ -57,82 +55,42 @@ function writeLocalDb(db) {
   }
 }
 
-// --- Cache Helpers ---
-function readCache() {
-  try {
-    if (!fs.existsSync(CACHE_PATH)) return {};
-    return JSON.parse(fs.readFileSync(CACHE_PATH, 'utf8'));
-  } catch { return {}; }
-}
-
-function writeCache(cache) {
-  try {
-    fs.writeFileSync(CACHE_PATH, JSON.stringify(cache, null, 2), 'utf8');
-  } catch (e) { console.warn('[Cache] write error:', e.message); }
-}
+// --- Cache Helpers (L1 en memoria, L2 Firestore) ---
+const memoryCache = {};
+const memoryAiCache = {};
 
 async function getCacheEntry(barcode) {
-  const cache = readCache();
-  if (cache[barcode]) return cache[barcode];
+  if (memoryCache[barcode]) return memoryCache[barcode];
   const fire = await fireGetCache(barcode);
-  if (fire) {
-    cache[barcode] = fire;
-    writeCache(cache);
-  }
+  if (fire) memoryCache[barcode] = fire;
   return fire;
 }
 
 function setCacheEntry(barcode, response, source, offLastModified = null) {
-  const cache = readCache();
   const now = Math.floor(Date.now() / 1000);
-  cache[barcode] = {
-    response,
-    source,
-    offLastModified,
-    cachedAt: now
-  };
-  writeCache(cache);
+  memoryCache[barcode] = { response, source, offLastModified, cachedAt: now };
   fireSetCache(barcode, response, source, offLastModified);
 }
 
 function removeCacheEntry(barcode) {
-  const cache = readCache();
-  delete cache[barcode];
-  writeCache(cache);
+  delete memoryCache[barcode];
   fireRemoveCache(barcode);
 }
 
-function readAiCache() {
-  try {
-    if (!fs.existsSync(AI_CACHE_PATH)) return {};
-    return JSON.parse(fs.readFileSync(AI_CACHE_PATH, 'utf8'));
-  } catch { return {}; }
-}
-
-function writeAiCache(cache) {
-  try { fs.writeFileSync(AI_CACHE_PATH, JSON.stringify(cache, null, 2), 'utf8'); } catch (e) { console.warn('[AiCache] write error:', e.message); }
-}
-
 async function getAiCacheEntry(key) {
-  const cache = readAiCache();
-  const entry = cache[key];
+  const entry = memoryAiCache[key];
   if (!entry) {
     const fire = await fireGetAiCache(key);
-    if (fire) {
-      cache[key] = { response: fire, cachedAt: Math.floor(Date.now() / 1000) };
-      writeAiCache(cache);
-    }
+    if (fire) memoryAiCache[key] = { response: fire, cachedAt: Math.floor(Date.now() / 1000) };
     return fire;
   }
   const age = Math.floor(Date.now() / 1000) - entry.cachedAt;
-  if (age > 86400) return null; // 24h TTL
+  if (age > 86400) return null;
   return entry.response;
 }
 
 function setAiCacheEntry(key, response) {
-  const cache = readAiCache();
-  cache[key] = { response, cachedAt: Math.floor(Date.now() / 1000) };
-  writeAiCache(cache);
+  memoryAiCache[key] = { response, cachedAt: Math.floor(Date.now() / 1000) };
   fireSetAiCache(key, response);
 }
 
@@ -256,17 +214,13 @@ app.get('/api/product/:barcode', async (req, res) => {
         const host = cached.source.includes("Mundial") ? "world.openfoodfacts.org" : "mx.openfoodfacts.org";
         const currentModified = await checkOFFLastModified(barcode, host);
         if (currentModified !== null && currentModified === cached.offLastModified) {
-          const cache2 = readCache();
-          cache2[barcode].cachedAt = now;
-          writeCache(cache2);
+          memoryCache[barcode].cachedAt = now;
           return res.json(cached.response);
         }
       }
 
       if (!isOFF && age < FALLBACK_TTL) {
-        const cache2 = readCache();
-        cache2[barcode].cachedAt = now;
-        writeCache(cache2);
+        memoryCache[barcode].cachedAt = now;
         return res.json(cached.response);
       }
 
