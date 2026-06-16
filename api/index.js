@@ -682,4 +682,4 @@ REGLAS ESTRICTAS:
   }
 });
 
-module.exports = app;
+module.exports = { app, computeEnergyLevel, detectGluten };
