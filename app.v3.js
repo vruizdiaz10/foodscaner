@@ -1083,7 +1083,12 @@ function renderProductData(product, barcode) {
   }
 
   if (product.isFromFallback && !product._enrichedFrom) {
-    analysisGrid.classList.add("hidden");
+    // Only hide grid if there are no ingredients to show (neither real nor OCR button)
+    if (!product.ingredientsText) {
+      analysisGrid.classList.add("hidden");
+    } else {
+      analysisGrid.classList.remove("hidden");
+    }
     noNutritionAlert.classList.remove("hidden");
     renderHypertensionCard(product);
     renderCholesterolCard(product);
