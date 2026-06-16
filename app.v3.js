@@ -903,7 +903,7 @@ function parseApiProduct(product) {
   // Nutriscore
   const nutriscore = product.nutriscore_grade || product.nutrition_grades || "-";
 
-  const allergensDataAvailable = allergensList.length > 0 || !!(product.allergens_tags?.length || product.allergens_from_ingredients || ingredientsText);
+  const allergensDataAvailable = allergensList.length > 0 || filteredAllergens.length > 0 || !!(product.allergens_tags?.length || product.allergens_from_ingredients || ingredientsText);
 
   return {
     name,
