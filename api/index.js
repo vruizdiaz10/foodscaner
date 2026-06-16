@@ -643,7 +643,7 @@ REGLAS ESTRICTAS:
 - No incluyas información de diabetes en el campo "notes" principal, úsala en "diabetes.notes".
 - DIETARY: Analiza cada campo basado en la lista de ingredientes: vegan (sin origen animal), vegetarian (sin carne/pescado), halal (sin cerdo/alcohol/gelatina), organic (ingredientes orgánicos), nonGmo (sin OGM), noAdditives (sin aditivos/preservantes artificiales), palmOilFree (sin aceite de palma), fairTrade (comercio justo, solo si el nombre o marca lo indica). Si no hay lista de ingredientes, usa confidence "baja" y basa tu respuesta en conocimiento general.
 - DIETARYDETAILS: Para cada campo en dietaryDetails, proporciona una explicación específica que mencione ingredientes concretos del producto que justifiquen tu decisión. Ejemplo: si vegan=false porque contiene "leche entera", el detail debe decir "Contiene leche entera (ingrediente de origen animal)". Si no hay lista de ingredientes, explica que el análisis se basa en conocimiento general del producto.
-- NOTRECOMMENDED: Identifica SOLO grupos de población para los que este producto NO es recomendable según sus ingredientes. Ej: "Niños" si contiene edulcorantes o cafeína, "Embarazadas" si contiene cafeína o alcohol, "Fenilcetonúricos" si contiene aspartame. NO incluyas grupos que SÍ sean aptos para el producto. Si un grupo no aplica, simplemente no lo incluyas en el array. Si no hay ingredientes o ningún grupo aplica, devuelve array vacío.`;
+- NOTRECOMMENDED: Devuelve SOLO grupos que NO son recomendables para este producto (porque contienen un ingrediente problemático). NUNCA incluyas grupos para los que el producto sea apto o que "no aplican". Si un grupo no aplica, no lo incluyas. Si ningún grupo aplica, devuelve array vacío. Ejemplo correcto: {"grupo": "Niños", "razon": "Contiene cafeína"}. Ejemplo INCORRECTO: {"grupo": "Fenilcetonúricos", "razon": "No aplica, no contiene aspartame"} — esto NO debe incluirse.`;
 
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -672,6 +672,12 @@ REGLAS ESTRICTAS:
     try {
       const cleaned = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
       parsed = JSON.parse(cleaned);
+      if (parsed.notRecommended && Array.isArray(parsed.notRecommended)) {
+        parsed.notRecommended = parsed.notRecommended.filter(nr => {
+          const r = (nr.razon || '').toLowerCase();
+          return !(r.includes('no aplica') || r.includes('no contiene'));
+        });
+      }
     } catch {
       return res.status(502).json({ error: "No se pudo parsear la respuesta JSON", raw: content });
     }
