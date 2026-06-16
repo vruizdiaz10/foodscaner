@@ -1964,7 +1964,10 @@ function initOcrHandlers() {
           signal: AbortSignal.timeout(30000)
         });
 
-        if (!aiResponse.ok) throw new Error("AI processing failed");
+        if (!aiResponse.ok) {
+          const errorData = await aiResponse.json();
+          throw new Error("AI processing failed: " + (errorData?.error || aiResponse.status));
+        }
         const aiData = await aiResponse.json();
         const cleanedText = aiData.cleanedText;
 

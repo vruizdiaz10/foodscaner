@@ -847,13 +847,15 @@ ${rawText}
 
 Ingredientes limpios (solo la lista, separada por comas):`;
 
+    console.log('[OCR Process] Starting AI cleaning...');
     const aiResult = await callGroq(cleaningPrompt, 'llama-3.3-70b-versatile', 1000);
     const cleanedText = aiResult.content.trim();
+    console.log('[OCR Process] Cleaned text:', cleanedText.substring(0, 100));
 
     res.json({ status: 'ok', cleanedText });
   } catch (error) {
-    console.error('[OCR Process] Error:', error.message);
-    res.status(500).json({ error: 'Error al procesar OCR: ' + error.message });
+    console.error('[OCR Process] Error:', error);
+    res.status(500).json({ error: 'Error al procesar OCR: ' + (error?.message || error) });
   }
 });
 
