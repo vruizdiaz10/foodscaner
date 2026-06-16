@@ -469,8 +469,13 @@
                 </div>
                 <div id="ai-provider-log" class="confidence-section provider-log hidden"></div>
                 <div id="cache-status" class="confidence-section hidden">
-                  <span id="cache-badge" class="cache-badge">📦 Caché</span>
-                  <button id="btn-refresh-product" class="cache-refresh-btn" title="Eliminar caché y volver a escanear">🔄 Actualizar</button>
+                  <div class="freshness-indicators">
+                    <span id="freshness-badge" class="freshness-badge" title="Estado de los datos">📦 Estado</span>
+                    <button id="btn-refresh-product" class="cache-refresh-btn" title="Refrescar datos y análisis">🔄 Actualizar Caché</button>
+                  </div>
+                  <div id="freshness-details" class="freshness-details hidden">
+                    <small id="freshness-text"></small>
+                  </div>
                 </div>
               </div>
             </div>

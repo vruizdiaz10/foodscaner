@@ -307,7 +307,7 @@ async function analyzeBarcode(barcode) {
       renderProductData(parsedProduct, barcode);
     }
     renderConfidenceWidget();
-    renderCacheStatus(data._fromCache, barcode);
+    renderCacheStatus(data, barcode);
   } catch (error) {
     renderNotFound();
   }
@@ -1766,20 +1766,68 @@ function renderConfidenceWidget() {
   card.classList.remove("hidden");
 }
 
-function renderCacheStatus(fromCache, barcode) {
+function renderCacheStatus(product, barcode) {
   const el = document.getElementById("cache-status");
-  const badge = document.getElementById("cache-badge");
+  const badge = document.getElementById("freshness-badge");
+  const details = document.getElementById("freshness-details");
+  const detailsText = document.getElementById("freshness-text");
   const btn = document.getElementById("btn-refresh-product");
+
   if (!el || !badge || !btn) return;
-  if (!fromCache) { el.classList.add("hidden"); return; }
+
+  // Hide if not from cache and not verified
+  if (!product?._fromCache && !product?._verified) {
+    el.classList.add("hidden");
+    return;
+  }
+
   el.classList.remove("hidden");
-  btn.onclick = () => {
+
+  // Show freshness indicator
+  if (product?._verified) {
+    badge.textContent = "✓ Verificado";
+    badge.className = "freshness-badge verified";
+    if (detailsText) detailsText.textContent = "Base de datos verificada — Datos confiables";
+    if (details) details.classList.remove("hidden");
+  } else if (product?._fromCache) {
+    badge.textContent = `⏱ En caché`;
+    badge.className = "freshness-badge cached";
+    if (detailsText) detailsText.textContent = "Datos en caché — Toca Actualizar para datos frescos";
+    if (details) details.classList.remove("hidden");
+  }
+
+  // Refresh button
+  btn.onclick = async () => {
     btn.disabled = true;
     btn.textContent = "⏳ Actualizando...";
-    fetch("/api/cache/" + barcode, { method: "DELETE", signal: AbortSignal.timeout(8000) })
-      .catch(e => console.warn("Error al borrar caché:", e))
-      .finally(() => { btn.disabled = false; btn.textContent = "🔄 Actualizar"; });
-    analyzeBarcode(barcode);
+
+    try {
+      const response = await fetch("/api/cache/refresh/" + barcode, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(15000)
+      });
+
+      if (!response.ok) throw new Error(`Error ${response.status}`);
+      const result = await response.json();
+
+      btn.textContent = `✓ ${result.message}`;
+      if (result.type === "verified") {
+        badge.textContent = "✓ Verificado (Actualizado)";
+        badge.className = "freshness-badge verified";
+      } else {
+        btn.textContent = "🔄 Actualizar Caché";
+        // Re-scan for fresh data
+        setTimeout(() => analyzeBarcode(barcode), 500);
+      }
+    } catch (e) {
+      console.warn("Error al refrescar:", e);
+      btn.textContent = "❌ Error";
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.textContent = "🔄 Actualizar Caché";
+      }, 2000);
+    }
   };
 }
 
