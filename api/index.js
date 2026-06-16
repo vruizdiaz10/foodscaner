@@ -625,9 +625,24 @@ app.post('/api/ai-query', async (req, res) => {
   if (!name) return res.status(400).json({ error: "Nombre del producto requerido" });
 
   // AI cache: misma consulta repetida dentro de 24h devuelve resultado previo
+  // Generamos modelLabel a partir del query (cache o fresh)
+  const provider = req.query.provider || 'all';
+  let modelLabel;
+  if (provider === 'groq') {
+    modelLabel = "Groq: " + (req.query.model || 'llama-3.3-70b-versatile');
+  } else if (provider === 'openrouter') {
+    modelLabel = "OpenRouter: " + (req.query.model || 'free');
+  } else if (provider === 'gemini') {
+    modelLabel = "Gemini 2.5 Flash";
+  } else {
+    modelLabel = "Groq: " + (req.query.model || 'llama-3.3-70b-versatile');
+  }
   const cacheKey = [name, brand, ingredients, sugars, carbohydrates, fiber, isBeverage].join('|');
   const cached = await getAiCacheEntry(cacheKey);
-  if (cached) return res.json(cached);
+  if (cached) {
+    cached._model = modelLabel;
+    return res.json(cached);
+  }
 
   let nutritionStr = '';
   if (sugars !== undefined && sugars !== null) {
@@ -669,7 +684,6 @@ REGLAS:
 - No inventes ingredientes`;
 
   try {
-    const provider = req.query.provider || 'all';
     let content, model;
     try {
       if (provider === 'groq') {
