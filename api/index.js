@@ -131,6 +131,7 @@ async function callGroq(prompt, model = 'llama-3.3-70b-versatile', max_tokens = 
     body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], temperature: 0.1, max_tokens }),
     signal: AbortSignal.timeout(15000)
   });
+  if (response.status === 429) throw new Error("Límite de velocidad excedido en Groq.");
   if (!response.ok) throw new Error(`Groq error: ${response.status}`);
   const data = await response.json();
   return data.choices?.[0]?.message?.content || "";
@@ -143,6 +144,7 @@ async function callGemini(prompt) {
     body: JSON.stringify({ model: 'gemini-2.0-flash', messages: [{ role: 'user', content: prompt }], temperature: 0.1 }),
     signal: AbortSignal.timeout(15000)
   });
+  if (response.status === 429) throw new Error("Límite de velocidad excedido. Intenta de nuevo en un minuto.");
   if (!response.ok) throw new Error(`Gemini error: ${response.status}`);
   const data = await response.json();
   return data.choices?.[0]?.message?.content || "";
@@ -671,9 +673,13 @@ REGLAS ESTRICTAS:
 - NOTRECOMMENDED: Devuelve SOLO grupos que NO son recomendables para este producto (porque contienen un ingrediente problemático). NUNCA incluyas grupos para los que el producto sea apto o que "no aplican". Si un grupo no aplica, no lo incluyas. Si ningún grupo aplica, devuelve array vacío. Ejemplo correcto: {"grupo": "Niños", "razon": "Contiene cafeína"}. Ejemplo INCORRECTO: {"grupo": "Fenilcetonúricos", "razon": "No aplica, no contiene aspartame"} — esto NO debe incluirse.`;
 
   try {
-    const content = await callAI(prompt);
+    let content;
+    try { content = await callAI(prompt); }
+    catch (e) {
+      return res.json({ error: "Análisis IA no disponible: " + e.message + " Los datos de la base de datos ya están visibles." });
+    }
 
-    if (!content) return res.status(502).json({ error: "Respuesta vacía de la IA" });
+    if (!content) return res.json({ error: "Análisis IA no disponible temporalmente. Los datos de la base de datos ya están visibles." });
 
     let parsed;
     try {
@@ -691,7 +697,7 @@ REGLAS ESTRICTAS:
 
     res.json(parsed);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.json({ error: "Error inesperado en análisis IA. Los datos del producto ya están visibles." });
   }
 });
 
