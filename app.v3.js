@@ -1987,6 +1987,8 @@ function initOcrHandlers() {
       if (!currentBarcode) return;
 
       saveBtn.disabled = true;
+      const originalText = saveBtn.textContent;
+      saveBtn.textContent = "🤖 Procesando con IA...";
       const textArea = document.getElementById("ocr-result");
       const ingredients = textArea?.value || "";
 
@@ -1994,17 +1996,26 @@ function initOcrHandlers() {
         const response = await fetch("/api/products/ocr", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ barcode: currentBarcode, ingredients })
+          body: JSON.stringify({ barcode: currentBarcode, ingredients }),
+          signal: AbortSignal.timeout(30000)
         });
 
         if (!response.ok) throw new Error(`Error ${response.status}`);
+        const result = await response.json();
+
+        // Show cleaned text
+        if (textArea) {
+          textArea.value = result.cleanedText;
+          textArea.setAttribute("readonly", "readonly");
+        }
 
         document.getElementById("ocr-step-3").classList.add("hidden");
         document.getElementById("ocr-step-4").classList.remove("hidden");
       } catch (err) {
         console.error("Save error:", err);
-        alert("Error al guardar: " + err.message);
+        alert("Error al procesar: " + err.message);
         saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
       }
     };
   }

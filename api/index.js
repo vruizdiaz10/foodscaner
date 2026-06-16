@@ -836,11 +836,31 @@ app.post('/api/products/ocr', async (req, res) => {
     if (!barcode || !ingredients) {
       return res.status(400).json({ error: 'Missing barcode or ingredients' });
     }
-    await fireSetOcrData(barcode, ingredients);
-    res.json({ status: 'ok', message: 'Ingredientes guardados correctamente', barcode });
+
+    // Clean and extract ingredients using AI
+    const cleaningPrompt = `El siguiente texto fue extraído de una imagen de una lista de ingredientes usando OCR.
+Por favor, corrige los errores de OCR y extrae SOLO la lista de ingredientes limpia, sin explicaciones adicionales.
+Retorna solo la lista de ingredientes separados por comas.
+
+Texto OCR:
+${ingredients}
+
+Ingredientes limpios (solo la lista, separada por comas):`;
+
+    const aiResult = await callGroq(cleaningPrompt, 'llama-3.3-70b-versatile', 1000);
+    const cleanedIngredients = aiResult.content.trim();
+
+    await fireSetOcrData(barcode, cleanedIngredients);
+    res.json({
+      status: 'ok',
+      message: 'Ingredientes procesados y guardados correctamente',
+      barcode,
+      originalText: ingredients,
+      cleanedText: cleanedIngredients
+    });
   } catch (error) {
     console.error('[OCR] Error:', error.message);
-    res.status(500).json({ error: 'Error al guardar ingredientes' });
+    res.status(500).json({ error: 'Error al procesar ingredientes: ' + error.message });
   }
 });
 
