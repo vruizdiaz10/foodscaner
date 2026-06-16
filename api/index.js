@@ -164,6 +164,8 @@ async function callGroq(prompt, model = 'llama-3.3-70b-versatile', max_tokens = 
   return data.choices?.[0]?.message?.content || "";
 }
 
+let _lastAiModel = "Groq (llama-3.3-70b)";
+
 async function callOpenRouter(prompt) {
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: 'POST',
@@ -174,6 +176,7 @@ async function callOpenRouter(prompt) {
   if (response.status === 429) throw new Error("Límite de velocidad excedido en OpenRouter.");
   if (!response.ok) throw new Error(`OpenRouter error: ${response.status}`);
   const data = await response.json();
+  _lastAiModel = "OpenRouter: " + (data.model || "free");
   return data.choices?.[0]?.message?.content || "";
 }
 
@@ -181,8 +184,7 @@ async function callAI(prompt, groqModel = 'llama-3.3-70b-versatile', max_tokens 
   try { return await callGroq(prompt, groqModel, max_tokens); }
   catch (e) {
     if (!process.env.OPENROUTER_API_KEY) throw e;
-    try { return await callOpenRouter(prompt); }
-    catch (e2) { throw e2; }
+    return await callOpenRouter(prompt);
   }
 }
 
@@ -682,6 +684,7 @@ REGLAS:
     try {
       const cleaned = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
       parsed = JSON.parse(cleaned);
+      parsed._model = _lastAiModel;
       if (parsed.notRecommended && Array.isArray(parsed.notRecommended)) {
         parsed.notRecommended = parsed.notRecommended.filter(nr => {
           const r = (nr.razon || '').toLowerCase();

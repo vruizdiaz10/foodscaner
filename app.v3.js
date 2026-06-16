@@ -1331,7 +1331,7 @@ function runAICheck(product) {
   errorEl.classList.add("hidden");
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
 
   fetch('/api/ai-query', {
     method: 'POST',
@@ -1557,6 +1557,13 @@ function runAICheck(product) {
         ? "No se proporcionó lista de ingredientes. El análisis se basa únicamente en el nombre y la marca del producto, por lo que los resultados pueden ser inexactos."
         : (data.notes || "");
       notesEl.classList.remove("hidden");
+    }
+
+    const modelEl = document.getElementById("confidence-model");
+    const modelTextEl = document.getElementById("confidence-model-text");
+    if (modelEl && modelTextEl && data._model) {
+      modelTextEl.textContent = data._model;
+      modelEl.classList.remove("hidden");
     }
 
     // Ocultar loading y error
