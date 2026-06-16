@@ -686,7 +686,8 @@ REGLAS:
     try {
       if (provider === 'groq') {
         if (!process.env.GROQ_API_KEY) throw new Error("GROQ_API_KEY no configurada");
-        content = await callGroq(prompt);
+        const groqModel = req.query.model || 'llama-3.3-70b-versatile';
+        content = await callGroq(prompt, groqModel);
       } else if (provider === 'openrouter') {
         content = await callOpenRouter(prompt);
       } else {

@@ -1531,26 +1531,35 @@ function runAICheck(product) {
     errorEl.classList.add("hidden");
   }
 
-  // --- Ejecución secuencial: Groq → OpenRouter ---
-  callProvider('groq', 7000)
+  // --- Ejecución secuencial: Groq 70b → Groq 8b → OpenRouter ---
+  callProvider('groq&model=llama-3.3-70b-versatile', 7000)
     .then(data => {
       if (data.error) throw new Error(data.error);
-      addProviderLog('Groq', 'ok', 'llama-3.3-70b-versatile');
+      addProviderLog('Groq 70b', 'ok', 'llama-3.3-70b-versatile');
       processAIResult(data);
     })
-    .catch(groqErr => {
-      addProviderLog('Groq', 'fail', groqErr.message);
-      return callProvider('openrouter', 12000)
+    .catch(err70 => {
+      addProviderLog('Groq 70b', 'fail', err70.message);
+      return callProvider('groq&model=llama-3.1-8b-instant', 7000)
         .then(data => {
           if (data.error) throw new Error(data.error);
-          addProviderLog('OpenRouter', 'ok', 'openrouter/free');
+          addProviderLog('Groq 8b', 'ok', 'llama-3.1-8b-instant');
           processAIResult(data);
         })
-        .catch(orErr => {
-          addProviderLog('OpenRouter', 'fail', orErr.message);
-          loadingEl.classList.add("hidden");
-          errorEl.textContent = 'Análisis IA no disponible. Groq: ' + groqErr.message + '. OpenRouter: ' + orErr.message + '. Los datos de la base de datos ya están visibles.';
-          errorEl.classList.remove("hidden");
+        .catch(err8b => {
+          addProviderLog('Groq 8b', 'fail', err8b.message);
+          return callProvider('openrouter', 12000)
+            .then(data => {
+              if (data.error) throw new Error(data.error);
+              addProviderLog('OpenRouter', 'ok', 'openrouter/free');
+              processAIResult(data);
+            })
+            .catch(orErr => {
+              addProviderLog('OpenRouter', 'fail', orErr.message);
+              loadingEl.classList.add("hidden");
+              errorEl.textContent = 'Análisis IA no disponible. Groq 70b: ' + err70.message + '. Groq 8b: ' + err8b.message + '. OpenRouter: ' + orErr.message + '. Los datos de la base de datos ya están visibles.';
+              errorEl.classList.remove("hidden");
+            });
         });
     });
 }
