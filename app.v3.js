@@ -190,6 +190,20 @@ function startScanning(cameraId) {
       if (navigator.vibrate) {
         navigator.vibrate(100);
       }
+      // Beep sound
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = 880;
+        gain.gain.value = 0.3;
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.15);
+      } catch (e) { /* audio no disponible */ }
       stopScanning();
       analyzeBarcode(decodedText);
     },
