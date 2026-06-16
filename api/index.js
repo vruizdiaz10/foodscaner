@@ -28,11 +28,12 @@ app.use('/api/', limiter);
 // --- Queue for Groq to avoid rate limiting ---
 let groqQueue = [];
 let groqProcessing = false;
-const GROQ_DELAY_MS = 1500; // ponytail: 1.5s between Groq calls to avoid 429
+let lastGroqCallTime = 0;
+const GROQ_DELAY_MS = 2500; // ponytail: 2.5s between Groq calls to respect rate limits
 
 async function queueGroqCall(prompt, model, maxTokens) {
   return new Promise((resolve, reject) => {
-    groqQueue.push({ prompt, model, maxTokens, resolve, reject });
+    groqQueue.push({ prompt, model, maxTokens, resolve, reject, createdAt: Date.now() });
     processGroqQueue();
   });
 }
@@ -42,16 +43,24 @@ async function processGroqQueue() {
   groqProcessing = true;
 
   while (groqQueue.length > 0) {
+    const now = Date.now();
+    const timeSinceLastCall = now - lastGroqCallTime;
+    const waitTime = Math.max(0, GROQ_DELAY_MS - timeSinceLastCall);
+
+    if (waitTime > 0) {
+      await new Promise(r => setTimeout(r, waitTime));
+    }
+
     const { prompt, model, maxTokens, resolve, reject } = groqQueue.shift();
     try {
+      console.log('[QUEUE] Processing Groq call, queue remaining:', groqQueue.length);
       const result = await callGroq(prompt, model, maxTokens);
+      lastGroqCallTime = Date.now();
       resolve(result);
     } catch (error) {
+      lastGroqCallTime = Date.now();
+      console.error('[QUEUE] Groq error:', error.message);
       reject(error);
-    }
-    // Wait before next call to avoid rate limiting
-    if (groqQueue.length > 0) {
-      await new Promise(r => setTimeout(r, GROQ_DELAY_MS));
     }
   }
 
@@ -186,7 +195,7 @@ async function callAI(prompt, groqModel = 'llama-3.3-70b-versatile', max_tokens 
 
   // Paralelo: ambos proveedores al mismo tiempo, gana el primero en responder
   const results = await Promise.allSettled([
-    callGroq(prompt, groqModel, max_tokens),
+    queueGroqCall(prompt, groqModel, max_tokens),
     callOpenRouter(prompt)
   ]);
 
