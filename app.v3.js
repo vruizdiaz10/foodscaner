@@ -272,7 +272,6 @@ function showState(stateElement) {
 
 // Main Business Logic: Barcode Identification & API Querying
 async function analyzeBarcode(barcode) {
-  console.log('[ANALYZEBARCODE] Starting with:', barcode);
   _lastAiProductKey = "";
   showState(resultLoading);
   currentBarcodeQuery = barcode;
@@ -1019,7 +1018,6 @@ function renderNotRecommended(product) {
 
 // Render dynamic results onto success screen
 function renderProductData(product, barcode) {
-  console.log('[RENDERPRODUCTDATA] Called with:', { barcode, isFood: product.isFood });
   if (!product.isFood) {
     renderRejected(product);
     return;
@@ -1065,8 +1063,26 @@ function renderProductData(product, barcode) {
     productImg.src = "";
   }
 
+  // Render ingredients list EARLY so it shows even for fallback products
+  const ingredientsSection = document.getElementById("ingredients-section");
+  const ingredientsTextEl = document.getElementById("ingredients-text");
+  const ocrRequestSection = document.getElementById("ocr-request-section");
+  if (ingredientsSection && ingredientsTextEl) {
+    if (product.ingredientsText && product.ingredientsText.trim()) {
+      ingredientsTextEl.textContent = product.ingredientsText;
+      ingredientsSection.classList.remove("hidden");
+      if (ocrRequestSection) ocrRequestSection.classList.add("hidden");
+    } else {
+      ingredientsSection.classList.add("hidden");
+      if (ocrRequestSection) {
+        ocrRequestSection.classList.remove("hidden");
+        const ocrBtn = document.getElementById("btn-ocr-ingredients");
+        if (ocrBtn) ocrBtn.onclick = () => showOcrModal(currentBarcode);
+      }
+    }
+  }
+
   if (product.isFromFallback && !product._enrichedFrom) {
-    console.log('[FALLBACK] Early return - isFromFallback:', product.isFromFallback, '_enrichedFrom:', product._enrichedFrom);
     analysisGrid.classList.add("hidden");
     noNutritionAlert.classList.remove("hidden");
     renderHypertensionCard(product);
@@ -1075,8 +1091,6 @@ function renderProductData(product, barcode) {
     runAICheck(product, barcode);
     return;
   }
-
-  console.log('[NOTFALLBACK] Continuing with full render');
 
   analysisGrid.classList.remove("hidden");
   noNutritionAlert.classList.add("hidden");
@@ -1296,27 +1310,6 @@ function renderProductData(product, barcode) {
 
   // Render No Recomendado Para section
   renderNotRecommended(product);
-
-  // Render ingredients list collapsible section
-  const ingredientsSection = document.getElementById("ingredients-section");
-  const ingredientsTextEl = document.getElementById("ingredients-text");
-  const ocrRequestSection = document.getElementById("ocr-request-section");
-  console.log('[INGREDIENTS] ingredientsText:', product.ingredientsText, 'hasSection:', !!ingredientsSection, 'hasOCR:', !!ocrRequestSection);
-  if (ingredientsSection && ingredientsTextEl) {
-    if (product.ingredientsText && product.ingredientsText.trim()) {
-      ingredientsTextEl.textContent = product.ingredientsText;
-      ingredientsSection.classList.remove("hidden");
-      if (ocrRequestSection) ocrRequestSection.classList.add("hidden");
-    } else {
-      ingredientsSection.classList.add("hidden");
-      if (ocrRequestSection) {
-        ocrRequestSection.classList.remove("hidden");
-        const ocrBtn = document.getElementById("btn-ocr-ingredients");
-        if (ocrBtn) ocrBtn.onclick = () => showOcrModal(currentBarcode);
-        console.log('[OCR] Button shown');
-      }
-    }
-  }
 
   // Render nutrition info collapsible section
   const nutritionSection = document.getElementById("nutrition-section");
