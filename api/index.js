@@ -249,9 +249,10 @@ app.get('/api/product/:barcode', async (req, res) => {
     }
 
     async function processOFFResult(result, sourceLabel, labelShort) {
+      // ponytail: collect all sources before returning - don't exit early
       if (!result) {
         sourceResults.push({ source: sourceLabel, found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
-        return;
+        return null;
       }
       const p = result.product;
       const pn = p.product_name || p.product_name_es || "Producto";
@@ -260,17 +261,19 @@ app.get('/api/product/:barcode', async (req, res) => {
       const ai = hd ? (p.allergens_tags?.length > 0 ? p.allergens_tags.join(", ") : "Con datos") : "Sin datos";
       const ni = (p.nutriments && p.nutriments['energy-kcal_100g']) ? Math.round(p.nutriments['energy-kcal_100g']) + " kcal/100g" : "Sin datos";
       sourceResults.push({ source: sourceLabel, found: true, productName: pn, brandName: bn, allergenInfo: ai, nutritionInfo: ni });
-      if (hd) {
-        const respData = { ...result, sourceLabel, sourceResults };
-        const lastMod = result.product.last_modified_t || null;
-        await setCacheEntry(barcode, respData, sourceLabel, lastMod);
-        return res.json(respData);
+
+      if (hd && !bestResult) {
+        bestResult = { ...result, sourceLabel };
+        bestSource = sourceLabel;
+        bestLastModified = result.product.last_modified_t || null;
+        return { found: true, data: bestResult };
       }
       if (!bestResult) {
         bestResult = { ...result, sourceLabel };
         bestSource = sourceLabel;
         bestLastModified = result.product.last_modified_t || null;
       }
+      return null;
     }
 
     let bestResult = null;
@@ -278,17 +281,15 @@ app.get('/api/product/:barcode', async (req, res) => {
     let bestLastModified = null;
     const sourceResults = [];
 
+    // Search ALL sources before returning
     const worldResult = await queryOFF("world.openfoodfacts.org");
     await processOFFResult(worldResult, "Open Food Facts (Mundial)", "OFF World");
-    if (res.headersSent) return;
 
     const mxResult = await queryOFF("mx.openfoodfacts.org");
     await processOFFResult(mxResult, "Open Food Facts (MX)", "OFF MX");
-    if (res.headersSent) return;
 
     const usResult = await queryOFF("us.openfoodfacts.org");
     await processOFFResult(usResult, "Open Food Facts (USA)", "OFF USA");
-    if (res.headersSent) return;
 
     // USDA FoodData Central — only if not a 750 prefix (doesn't find MX products)
     if (barcode.startsWith("750")) {
@@ -544,8 +545,9 @@ app.get('/api/product/:barcode', async (req, res) => {
       return null;
     }
 
+    // Search UPCItemDb and GTINHub before returning
     // Enrichment: buscar por nombre en USDA si OFF/UPCItemDb/GTINHub tiene nombre pero faltan datos
-    if (bestResult) {
+    if (bestResult && !bestResult.product?.isFromFallback) {
       const p = bestResult.product;
       const pName = p.product_name || p.product_name_es || "";
       const pBrand = p.brands || "";
@@ -576,10 +578,21 @@ app.get('/api/product/:barcode', async (req, res) => {
           p._enrichedFrom = "USDA (por nombre)";
         }
       }
+      // bestResult found - continue to UPCItemDb/GTINHub for complete sourceResults
+      // (will return after all sources searched)
+    }
+
+    // Continue searching even if bestResult exists - we need complete sourceResults
+    // (UPCItemDb and GTINHub are already searched above and added to sourceResults)
+
+    // If we have bestResult, use it
+    if (bestResult) {
       const respData = { ...bestResult, sourceResults };
       await setCacheEntry(barcode, respData, bestSource, bestLastModified);
       return res.json(respData);
     }
+
+    // Otherwise use fallbackResult if available
     if (fallbackResult) {
       const fbName = fallbackResult.product.name || "";
       const fbBrand = fallbackResult.product.brand || "";
