@@ -140,7 +140,7 @@ async function callGemini(prompt) {
   const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${process.env.GEMINI_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'gemini-1.5-flash', messages: [{ role: 'user', content: prompt }], temperature: 0.1 }),
+    body: JSON.stringify({ model: 'gemini-2.0-flash', messages: [{ role: 'user', content: prompt }], temperature: 0.1 }),
     signal: AbortSignal.timeout(15000)
   });
   if (!response.ok) throw new Error(`Gemini error: ${response.status}`);
