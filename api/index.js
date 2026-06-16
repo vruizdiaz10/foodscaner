@@ -129,7 +129,7 @@ async function callGroq(prompt, model = 'llama-3.3-70b-versatile', max_tokens = 
     method: 'POST',
     headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], temperature: 0.1, max_tokens }),
-    signal: AbortSignal.timeout(15000)
+    signal: AbortSignal.timeout(5000)
   });
   if (response.status === 429) throw new Error("Límite de velocidad excedido en Groq.");
   if (!response.ok) throw new Error(`Groq error: ${response.status}`);
@@ -144,7 +144,7 @@ async function callGemini(prompt) {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${process.env.GEMINI_API_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ model: 'gemini-2.5-flash', messages: [{ role: 'user', content: prompt }], temperature: 0.1 }),
-    signal: AbortSignal.timeout(15000)
+    signal: AbortSignal.timeout(5000)
   });
   if (response.status === 429) throw new Error("Límite de velocidad excedido. Intenta de nuevo en un minuto.");
   if (!response.ok) {
@@ -153,7 +153,7 @@ async function callGemini(prompt) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-      signal: AbortSignal.timeout(15000)
+      signal: AbortSignal.timeout(5000)
     });
     if (!response.ok) throw new Error(`Gemini error: ${response.status}`);
     const data = await response.json();

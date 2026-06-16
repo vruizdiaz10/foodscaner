@@ -1330,6 +1330,9 @@ function runAICheck(product) {
   loadingEl.classList.remove("hidden");
   errorEl.classList.add("hidden");
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
+
   fetch('/api/ai-query', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1343,9 +1346,10 @@ function runAICheck(product) {
       fiber: product.carbohydrates?.fiber ?? null,
       isBeverage: product.isBeverage ?? null,
       dietary: product.dietary ?? null
-    })
+    }),
+    signal: controller.signal
   })
-  .then(r => r.json())
+  .then(r => { clearTimeout(timeoutId); return r.json(); })
   .then(data => {
     loadingEl.classList.add("hidden");
     if (data.error) {
