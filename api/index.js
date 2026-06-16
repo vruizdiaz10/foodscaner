@@ -171,7 +171,7 @@ async function callOpenRouter(prompt) {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ model: 'openrouter/free', messages: [{ role: 'user', content: prompt }], temperature: 0.1 }),
-    signal: AbortSignal.timeout(8000)
+    signal: AbortSignal.timeout(9000)
   });
   if (response.status === 429) throw new Error("Límite de velocidad excedido en OpenRouter.");
   if (!response.ok) throw new Error(`OpenRouter error: ${response.status}`);
@@ -181,11 +181,12 @@ async function callOpenRouter(prompt) {
 }
 
 async function callAI(prompt, groqModel = 'llama-3.3-70b-versatile', max_tokens = 3000) {
-  try { return await callGroq(prompt, groqModel, max_tokens); }
-  catch (e) {
-    if (!process.env.OPENROUTER_API_KEY) throw e;
-    return await callOpenRouter(prompt);
+  // Saltar Groq si no hay key configurada
+  if (process.env.GROQ_API_KEY) {
+    try { return await callGroq(prompt, groqModel, max_tokens); }
+    catch (e) { /* fall through to OpenRouter */ }
   }
+  return await callOpenRouter(prompt);
 }
 
 // --- Product Search ---
