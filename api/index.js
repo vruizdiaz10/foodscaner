@@ -2,10 +2,15 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const rateLimit = require('express-rate-limit');
+const { fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache } = require('./firestore');
 
 const app = express();
 
 app.use(express.json());
+
+const limiter = rateLimit({ windowMs: 60000, max: 30, message: { error: "Demasiadas solicitudes. Intenta de nuevo en 1 minuto." } });
+app.use('/api/', limiter);
 
 const DB_PATH = '/tmp/local_mexican_products.json';
 const CACHE_PATH = '/tmp/foodscaner_cache.json';
@@ -30,7 +35,7 @@ try {
   if (!fs.existsSync(DB_PATH) && INITIAL_DB_PATH) {
     fs.copyFileSync(INITIAL_DB_PATH, DB_PATH);
   }
-} catch (e) {}
+} catch (e) { console.warn('[DB] init copy error:', e.message); }
 
 function readLocalDb() {
   try {
@@ -63,12 +68,18 @@ function readCache() {
 function writeCache(cache) {
   try {
     fs.writeFileSync(CACHE_PATH, JSON.stringify(cache, null, 2), 'utf8');
-  } catch {}
+  } catch (e) { console.warn('[Cache] write error:', e.message); }
 }
 
-function getCacheEntry(barcode) {
+async function getCacheEntry(barcode) {
   const cache = readCache();
-  return cache[barcode] || null;
+  if (cache[barcode]) return cache[barcode];
+  const fire = await fireGetCache(barcode);
+  if (fire) {
+    cache[barcode] = fire;
+    writeCache(cache);
+  }
+  return fire;
 }
 
 function setCacheEntry(barcode, response, source, offLastModified = null) {
@@ -81,12 +92,14 @@ function setCacheEntry(barcode, response, source, offLastModified = null) {
     cachedAt: now
   };
   writeCache(cache);
+  fireSetCache(barcode, response, source, offLastModified);
 }
 
 function removeCacheEntry(barcode) {
   const cache = readCache();
   delete cache[barcode];
   writeCache(cache);
+  fireRemoveCache(barcode);
 }
 
 function readAiCache() {
@@ -97,13 +110,20 @@ function readAiCache() {
 }
 
 function writeAiCache(cache) {
-  try { fs.writeFileSync(AI_CACHE_PATH, JSON.stringify(cache, null, 2), 'utf8'); } catch {}
+  try { fs.writeFileSync(AI_CACHE_PATH, JSON.stringify(cache, null, 2), 'utf8'); } catch (e) { console.warn('[AiCache] write error:', e.message); }
 }
 
-function getAiCacheEntry(key) {
+async function getAiCacheEntry(key) {
   const cache = readAiCache();
   const entry = cache[key];
-  if (!entry) return null;
+  if (!entry) {
+    const fire = await fireGetAiCache(key);
+    if (fire) {
+      cache[key] = { response: fire, cachedAt: Math.floor(Date.now() / 1000) };
+      writeAiCache(cache);
+    }
+    return fire;
+  }
   const age = Math.floor(Date.now() / 1000) - entry.cachedAt;
   if (age > 86400) return null; // 24h TTL
   return entry.response;
@@ -113,6 +133,7 @@ function setAiCacheEntry(key, response) {
   const cache = readAiCache();
   cache[key] = { response, cachedAt: Math.floor(Date.now() / 1000) };
   writeAiCache(cache);
+  fireSetAiCache(key, response);
 }
 
 // Lightweight OFF freshness check: fetch only last_modified_t (tiny payload)
@@ -211,15 +232,19 @@ async function callAI(prompt, groqModel = 'llama-3.3-70b-versatile', max_tokens 
   throw results[1].reason || results[0].reason || new Error("Ambos proveedores fallaron");
 }
 
+function isValidBarcode(s) { return /^\d{8,14}$/.test(s); }
+
 // --- Product Search ---
 app.get('/api/product/:barcode', async (req, res) => {
   try {
     const barcode = req.params.barcode;
+    if (!isValidBarcode(barcode)) return res.status(400).json({ status: 0, message: "Código de barras inválido" });
     const now = Math.floor(Date.now() / 1000);
 
     // ----- CACHE LOOKUP -----
-    const cached = getCacheEntry(barcode);
+    const cached = await getCacheEntry(barcode);
     if (cached) {
+      cached.response._fromCache = true;
       const age = now - cached.cachedAt;
       const isOFF = cached.source && cached.source.includes("Open Food Facts");
 
@@ -257,7 +282,7 @@ app.get('/api/product/:barcode', async (req, res) => {
           const data = await response.json();
           if (data.status === 1 && data.product) return data;
         }
-      } catch (e) {}
+      } catch (e) { console.warn('[OFF] query error:', e.message); }
       return null;
     }
 
@@ -456,7 +481,7 @@ app.get('/api/product/:barcode', async (req, res) => {
             return { calories: { value: kcal, level: energyLevel, percent }, gluten: { hasGluten, details: glutenDetails }, sugars: { sugars: sugarsVal, carbohydrates: carbsVal, fiber: fiberVal }, saturatedFat: satFatVal, sodium: sodiumVal, allergens, ingredientsText: item.ingredients || "" };
           }
         }
-      } catch (e) {}
+      } catch (e) { console.warn('[USDA] enrich error:', e.message); }
       return null;
     }
 
@@ -550,7 +575,7 @@ app.get('/api/product/:barcode', async (req, res) => {
           const parsed = JSON.parse(match[0]);
           if (parsed.known && parsed.name && parsed.name !== "Producto") return parsed;
         }
-      } catch (e) {}
+      } catch (e) { console.warn('[AI] identify error:', e.message); }
       return null;
     }
 
@@ -652,7 +677,7 @@ app.post('/api/ai-query', async (req, res) => {
 
   // AI cache: misma consulta repetida dentro de 24h devuelve resultado previo
   const cacheKey = [name, brand, ingredients, sugars, carbohydrates, fiber, isBeverage].join('|');
-  const cached = getAiCacheEntry(cacheKey);
+  const cached = await getAiCacheEntry(cacheKey);
   if (cached) return res.json(cached);
 
   let nutritionStr = '';
@@ -737,6 +762,11 @@ REGLAS:
   } catch (err) {
     res.json({ error: "Error inesperado en análisis IA. Los datos del producto ya están visibles." });
   }
+});
+
+app.delete('/api/cache/:barcode', (req, res) => {
+  removeCacheEntry(req.params.barcode);
+  res.json({ ok: true, message: "Caché eliminado para " + req.params.barcode });
 });
 
 module.exports = app;

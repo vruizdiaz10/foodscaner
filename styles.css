@@ -1570,3 +1570,29 @@ body {
 .confidence-section.provider-log .provider-entry .status-dot.ok { background: #22c55e; }
 .confidence-section.provider-log .provider-entry .status-dot.fail { background: #ef4444; }
 .confidence-section.provider-log .provider-entry .provider-name { font-weight: 600; color: var(--text-primary); }
+
+.cache-badge {
+  display: inline-block;
+  background: #1e293b;
+  color: #fbbf24;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.cache-refresh-btn {
+  margin-left: 8px;
+  background: #1e293b;
+  color: #60a5fa;
+  border: 1px solid #334155;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-weight: 500;
+  vertical-align: middle;
+}
+
+.cache-refresh-btn:hover { background: #334155; }
+.cache-refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }

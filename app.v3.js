@@ -2,6 +2,12 @@
    Yomi Core JavaScript Logic
    ========================================================================== */
 
+function esc(s) {
+  const div = document.createElement('div');
+  div.appendChild(document.createTextNode(String(s)));
+  return div.innerHTML;
+}
+
 // DOM Elements
 const btnToggleCamera = document.getElementById("btn-toggle-camera");
 const cameraSelectWrapper = document.getElementById("camera-select-wrapper");
@@ -299,6 +305,7 @@ async function analyzeBarcode(barcode) {
       renderProductData(parsedProduct, barcode);
     }
     renderConfidenceWidget();
+    renderCacheStatus(data._fromCache, barcode);
   } catch (error) {
     renderNotFound();
   }
@@ -1179,7 +1186,7 @@ function renderProductData(product, barcode) {
       const icon = iconKey ? EXTRA_ALLERGEN_ICONS[iconKey] : "⚠️";
       const tag = document.createElement("span");
       tag.className = "allergen-tag";
-      tag.innerHTML = `${icon} ${allergen}`;
+      tag.innerHTML = `${icon} ${esc(allergen)}`;
       allergensList.appendChild(tag);
     });
     allergensList.classList.remove("hidden");
@@ -1251,7 +1258,7 @@ function renderProductData(product, barcode) {
         const el = document.createElement("span");
         el.className = "not-rec-item " + (item.certain !== false ? "certain" : "possible");
         el.title = `${item.grupo}: ${item.razon}`;
-        el.innerHTML = `<span class="not-rec-icon">${item.icon}</span><span class="not-rec-grupo">${item.grupo}</span><span class="not-rec-razon">${item.razon}</span>`;
+        el.innerHTML = `<span class="not-rec-icon">${item.icon}</span><span class="not-rec-grupo">${esc(item.grupo)}</span><span class="not-rec-razon">${esc(item.razon)}</span>`;
         notRecContainer.appendChild(el);
       });
       cardNotRec.classList.remove("hidden");
@@ -1397,7 +1404,7 @@ function runAICheck(product) {
           const el = document.createElement("span");
           el.className = "not-rec-item " + (item.certain !== false ? "certain" : "possible");
           el.title = `${item.grupo}: ${item.razon}`;
-          el.innerHTML = `<span class="not-rec-icon">${item.icon}</span><span class="not-rec-grupo">${item.grupo}</span><span class="not-rec-razon">${item.razon}</span>`;
+          el.innerHTML = `<span class="not-rec-icon">${item.icon}</span><span class="not-rec-grupo">${esc(item.grupo)}</span><span class="not-rec-razon">${esc(item.razon)}</span>`;
           notRecContainer.appendChild(el);
         });
         cardNotRec.classList.remove("hidden");
@@ -1477,7 +1484,7 @@ function runAICheck(product) {
             const icon = iconKey ? EXTRA_ALLERGEN_ICONS[iconKey] : "🤖";
             const tag = document.createElement("span");
             tag.className = "allergen-tag ai-suggested";
-            tag.innerHTML = `${icon} ${allergen}`;
+            tag.innerHTML = `${icon} ${esc(allergen)}`;
             tag.title = "Sugerido por análisis de IA";
             allergensList.appendChild(tag);
           });
@@ -1509,7 +1516,7 @@ function runAICheck(product) {
       if (!product.ingredientsText) { level = "baja"; }
       const emojis = { alta: "🟢", media: "🟡", baja: "🔴" };
       const labels = { alta: "Alta", media: "Media", baja: "Baja" };
-      aiLevelEl.innerHTML = `${emojis[level] || "⚪"} ${labels[level] || data.confidence || "N/A"}`;
+      aiLevelEl.innerHTML = `${emojis[level] || "⚪"} ${esc(labels[level] || data.confidence || "N/A")}`;
       aiLevelEl.className = "confidence-ai-level confidence-ai-" + (level === "alta" ? "alta" : level === "media" ? "media" : "baja");
       confidenceEl.classList.remove("hidden");
     }
@@ -1756,6 +1763,23 @@ function renderConfidenceWidget() {
     sourcesEl.appendChild(tag);
   }
   card.classList.remove("hidden");
+}
+
+function renderCacheStatus(fromCache, barcode) {
+  const el = document.getElementById("cache-status");
+  const badge = document.getElementById("cache-badge");
+  const btn = document.getElementById("btn-refresh-product");
+  if (!el || !badge || !btn) return;
+  if (!fromCache) { el.classList.add("hidden"); return; }
+  el.classList.remove("hidden");
+  btn.onclick = async () => {
+    btn.disabled = true;
+    btn.textContent = "⏳ Actualizando...";
+    try {
+      await fetch("/api/cache/" + barcode, { method: "DELETE" });
+    } catch {}
+    scanBarcode(barcode);
+  };
 }
 
 // Render rejected state screen
