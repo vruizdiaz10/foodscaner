@@ -644,65 +644,30 @@ app.post('/api/ai-query', async (req, res) => {
     nutritionStr += `\nNota: Este producto es una bebida.`;
   }
 
-  const prompt = `Eres un experto en análisis de alimentos. Analiza el producto "${name}"${brand ? ` de la marca "${brand}"` : ''}.${ingredients ? `\n\nLista de ingredientes: "${ingredients}"` : ''}${allergens && allergens.length ? `\n\nAlérgenos declarados: ${allergens.join(", ")}` : ''}${nutritionStr}
+  const prompt = `Eres un experto en análisis de alimentos. Analiza "${name}"${brand ? ` (${brand})` : ''}.${ingredients ? `\nIngredientes: "${ingredients}"` : ''}${allergens?.length ? `\nAlérgenos: ${allergens.join(", ")}` : ''}${nutritionStr}
 
-Responde ÚNICAMENTE con un objeto JSON válido, sin explicaciones adicionales, sin markdown, sin bloques de código:
-
+Responde SOLO JSON sin markdown:
 {
-  "gluten": {
-    "hasGluten": true,
-    "details": "Justificación breve con ingredientes específicos detectados"
-  },
-  "allergens": ["Leche", "Soja"],
-  "diabetes": {
-    "risk": "bajo",
-    "glycemicImpact": "bajo",
-    "notes": "Explicación breve basada en azúcares, carbohidratos, fibra e ingredientes"
-  },
-  "dietary": {
-    "vegan": true,
-    "vegetarian": true,
-    "halal": true,
-    "organic": true,
-    "nonGmo": true,
-    "noAdditives": true,
-    "palmOilFree": true,
-    "fairTrade": true
-  },
-  "dietaryDetails": {
-    "vegan": "Explicación de por qué es o no vegano, mencionando ingredientes específicos si aplica.",
-    "vegetarian": "Explicación de por qué es o no vegetariano.",
-    "halal": "Explicación de por qué es o no halal.",
-    "organic": "Explicación de por qué es o no orgánico.",
-    "nonGmo": "Explicación de por qué es o no libre de OGM.",
-    "noAdditives": "Explicación de por qué es o no libre de aditivos.",
-    "palmOilFree": "Explicación de por qué es o no libre de aceite de palma.",
-    "fairTrade": "Explicación de por qué es o no de comercio justo."
-  },
-  "notRecommended": [
-    {"grupo": "Niños", "razon": "Contiene edulcorantes y cafeína"},
-    {"grupo": "Embarazadas", "razon": "Contiene cafeína"}
-  ],
-  "confidence": "alta/media/baja",
-  "notes": "notas adicionales"
+  "gluten": {"hasGluten":bool,"details":"breve"},
+  "allergens":["ej: Leche"],
+  "diabetes":{"risk":"bajo|medio|alto","glycemicImpact":"bajo|medio|alto","notes":"breve"},
+  "dietary":{"vegan":bool,"vegetarian":bool,"halal":bool,"organic":bool,"nonGmo":bool,"noAdditives":bool,"palmOilFree":bool,"fairTrade":bool},
+  "dietaryDetails":{"vegan":"explicación","vegetarian":"explicación","halal":"explicación","organic":"explicación","nonGmo":"explicación","noAdditives":"explicación","palmOilFree":"explicación","fairTrade":"explicación"},
+  "notRecommended":[{"grupo":"Niños","razon":"contiene cafeína"}],
+  "confidence":"alta|media|baja",
+  "notes":"breve"
 }
 
-REGLAS ESTRICTAS:
-- Basa tu análisis ÚNICAMENTE en la lista de ingredientes proporcionada. No inventes ingredientes ni asumas la composición del producto por su nombre o marca.
-- hasGluten debe ser true SOLO si la lista de ingredientes contiene un ingrediente específico que contenga gluten (ej: "harina de trigo", "avena", "cebada").
-- Si no hay lista de ingredientes, basa tu análisis en el conocimiento general del producto y usa confidence "baja".
-- Si hasGluten es false, details debe explicar por qué no se detectaron ingredientes con gluten en la lista proporcionada.
-- Distingue entre "contiene gluten como ingrediente" (hasGluten: true) y "puede contener trazas" (hasGluten: false, menciónalo en notes).
-- SI TIENES DUDAS, usa confidence "baja" y explica en notes.
-- No inventes ingredientes. Si la lista de ingredientes no contiene algo, no lo incluyas en tu análisis.
-- ALÉRGENOS: Detecta alérgenos de la lista de ingredientes SIEMPRE que sea posible. Si no hay ingredientes, infiere alérgenos OBVIOS del nombre del producto (ej: "Sardinas" → incluye "Pescado", "Leche" → incluye "Lácteos", "Pan" → incluye "Trigo"). No incluyas gluten ni cereales con gluten en la lista de alérgenos.
-- DIABETES: risk debe ser "bajo", "medio" o "alto" según la cantidad de azúcares por 100g, carbohidratos totales, y fibra (la fibra mitiga el impacto). Usa las tablas de referencia de la OMS: bajo ≤5g sólidos / ≤2.5g bebidas, alto >22.5g sólidos / >11.25g bebidas.
-- DIABETES: glycemicImpact debe estimar si el producto tiene índice glucémico bajo, medio o alto según ingredientes, presencia de fibra y tipo de carbohidratos.
-- DIABETES: Si no hay datos de azúcares ni carbohidratos, usa riesgo "bajo" con confidence "baja" y explain en notes.
-- No incluyas información de diabetes en el campo "notes" principal, úsala en "diabetes.notes".
-- DIETARY: Analiza cada campo basado en la lista de ingredientes: vegan (sin origen animal), vegetarian (sin carne/pescado), halal (sin cerdo/alcohol/gelatina), organic (ingredientes orgánicos), nonGmo (sin OGM), noAdditives (sin aditivos/preservantes artificiales), palmOilFree (sin aceite de palma), fairTrade (comercio justo, solo si el nombre o marca lo indica). Si no hay lista de ingredientes, usa confidence "baja" y basa tu respuesta en conocimiento general.
-- DIETARYDETAILS: Para cada campo en dietaryDetails, proporciona una explicación específica que mencione ingredientes concretos del producto que justifiquen tu decisión. Ejemplo: si vegan=false porque contiene "leche entera", el detail debe decir "Contiene leche entera (ingrediente de origen animal)". Si no hay lista de ingredientes, explica que el análisis se basa en conocimiento general del producto.
-- NOTRECOMMENDED: Devuelve SOLO grupos que NO son recomendables para este producto (porque contienen un ingrediente problemático). NUNCA incluyas grupos para los que el producto sea apto o que "no aplican". Si un grupo no aplica, no lo incluyas. Si ningún grupo aplica, devuelve array vacío. Ejemplo correcto: {"grupo": "Niños", "razon": "Contiene cafeína"}. Ejemplo INCORRECTO: {"grupo": "Fenilcetonúricos", "razon": "No aplica, no contiene aspartame"} — esto NO debe incluirse.`;
+REGLAS:
+- Gluten: true SOLO si ingredientes contienen trigo/avena/cebada/centeno explícitamente
+- Sin ingredientes → basa en conocimiento general, confidence "baja"
+- Alérgenos: detecta de ingredientes. Si no hay, infiere obvios del nombre (Sardinas→Pescado). No incluyas gluten aquí
+- Diabetes: usa OMS (bajo ≤5g azúcar sólidos / ≤2.5g bebidas, alto >22.5g / >11.25g). Fibra reduce impacto
+- Dietary: analiza contra ingredientes. vegan=sin origen animal, halal=sin cerdo/alcohol, nonGmo=sin OGM, noAdditives=sin aditivos, palmOilFree=sin aceite palma, fairTrade=solo si nombre/marca lo indica
+- DietaryDetails: explica cada campo mencionando ingredientes concretos que justifiquen la decisión
+- notRecommended: incluir SOLO grupos no aptos (con ingrediente problemático). Si ninguno, array vacío. NUNCA incluir grupos que "no aplican"
+- DUDAS → confidence "baja" y explica en notes
+- No inventes ingredientes`;
 
   try {
     let content;
