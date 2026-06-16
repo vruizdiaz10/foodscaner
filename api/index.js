@@ -138,14 +138,27 @@ async function callGroq(prompt, model = 'llama-3.3-70b-versatile', max_tokens = 
 }
 
 async function callGemini(prompt) {
-  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+  let response;
+  // Try OpenAI-compatible endpoint first
+  response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${process.env.GEMINI_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'gemini-2.0-flash', messages: [{ role: 'user', content: prompt }], temperature: 0.1 }),
+    body: JSON.stringify({ model: 'gemini-2.5-flash', messages: [{ role: 'user', content: prompt }], temperature: 0.1 }),
     signal: AbortSignal.timeout(15000)
   });
   if (response.status === 429) throw new Error("Límite de velocidad excedido. Intenta de nuevo en un minuto.");
-  if (!response.ok) throw new Error(`Gemini error: ${response.status}`);
+  if (!response.ok) {
+    // Fallback: REST API directa
+    response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      signal: AbortSignal.timeout(15000)
+    });
+    if (!response.ok) throw new Error(`Gemini error: ${response.status}`);
+    const data = await response.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  }
   const data = await response.json();
   return data.choices?.[0]?.message?.content || "";
 }
