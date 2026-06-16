@@ -140,11 +140,8 @@ async function callGroq(prompt, model = 'llama-3.3-70b-versatile', max_tokens = 
   if (response.status === 429) throw new Error("Límite de velocidad excedido en Groq.");
   if (!response.ok) throw new Error(`Groq error: ${response.status}`);
   const data = await response.json();
-  _lastAiModel = "Groq: " + model;
-  return data.choices?.[0]?.message?.content || "";
+  return { content: data.choices?.[0]?.message?.content || "", model: "Groq: " + model };
 }
-
-let _lastAiModel = "Groq (llama-3.3-70b)";
 
 async function callOpenRouter(prompt) {
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -156,8 +153,7 @@ async function callOpenRouter(prompt) {
   if (response.status === 429) throw new Error("Límite de velocidad excedido en OpenRouter.");
   if (!response.ok) throw new Error(`OpenRouter error: ${response.status}`);
   const data = await response.json();
-  _lastAiModel = "OpenRouter: " + (data.model || "free");
-  return data.choices?.[0]?.message?.content || "";
+  return { content: data.choices?.[0]?.message?.content || "", model: "OpenRouter: " + (data.model || "free") };
 }
 
 async function callGemini(prompt) {
@@ -170,8 +166,7 @@ async function callGemini(prompt) {
   if (response.status === 429) throw new Error("Límite de velocidad excedido en Gemini.");
   if (!response.ok) throw new Error(`Gemini error: ${response.status}`);
   const data = await response.json();
-  _lastAiModel = "Gemini 2.5 Flash";
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  return { content: data.candidates?.[0]?.content?.parts?.[0]?.text || "", model: "Gemini 2.5 Flash" };
 }
 
 async function callAI(prompt, groqModel = 'llama-3.3-70b-versatile', max_tokens = 3000) {
@@ -184,7 +179,7 @@ async function callAI(prompt, groqModel = 'llama-3.3-70b-versatile', max_tokens 
   ]);
 
   for (const r of results) {
-    if (r.status === 'fulfilled' && typeof r.value === 'string' && r.value.length > 0) return r.value;
+    if (r.status === 'fulfilled' && r.value && typeof r.value.content === 'string' && r.value.content.length > 0) return r.value;
   }
   // Si ambos fallaron, lanzar el error del segundo (OpenRouter)
   throw results[1].reason || results[0].reason || new Error("Ambos proveedores fallaron");
@@ -675,19 +670,19 @@ REGLAS:
 
   try {
     const provider = req.query.provider || 'all';
-    let content;
+    let content, model;
     try {
       if (provider === 'groq') {
         if (!process.env.GROQ_API_KEY) throw new Error("GROQ_API_KEY no configurada");
         const groqModel = req.query.model || 'llama-3.3-70b-versatile';
-        content = await callGroq(prompt, groqModel);
+        ({ content, model } = await callGroq(prompt, groqModel));
       } else if (provider === 'openrouter') {
-        content = await callOpenRouter(prompt);
+        ({ content, model } = await callOpenRouter(prompt));
       } else if (provider === 'gemini') {
         if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY no configurada");
-        content = await callGemini(prompt);
+        ({ content, model } = await callGemini(prompt));
       } else {
-        content = await callAI(prompt);
+        ({ content, model } = await callAI(prompt));
       }
     }
     catch (e) {
@@ -700,7 +695,7 @@ REGLAS:
     try {
       const cleaned = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
       parsed = JSON.parse(cleaned);
-      parsed._model = _lastAiModel;
+      parsed._model = model;
       if (parsed.notRecommended && Array.isArray(parsed.notRecommended)) {
         parsed.notRecommended = parsed.notRecommended.filter(nr => {
           const r = (nr.razon || '').toLowerCase();
