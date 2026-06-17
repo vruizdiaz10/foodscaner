@@ -969,18 +969,24 @@ app.get('/api/ocr/debug/:barcode', async (req, res) => {
 app.post('/api/products/ocr', async (req, res) => {
   try {
     const { barcode, ingredients } = req.body;
+    console.log('[OCR Save] Received:', { barcode, ingredientsLength: ingredients?.length });
+
     if (!barcode || !ingredients) {
+      console.error('[OCR Save] Missing data:', { barcode, ingredients });
       return res.status(400).json({ error: 'Missing barcode or ingredients' });
     }
 
+    console.log('[OCR Save] Calling fireSetOcrData...');
     await fireSetOcrData(barcode, ingredients);
+
+    console.log('[OCR Save] Success');
     res.json({
       status: 'ok',
       message: 'Ingredientes guardados correctamente',
       barcode
     });
   } catch (error) {
-    console.error('[OCR Save] Error:', error.message);
+    console.error('[OCR Save] Error:', error);
     res.status(500).json({ error: 'Error al guardar ingredientes: ' + error.message });
   }
 });
