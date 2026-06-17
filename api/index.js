@@ -967,20 +967,25 @@ app.post('/api/nutrition/process', async (req, res) => {
       return res.status(400).json({ error: 'Missing rawText' });
     }
 
-    const cleaningPrompt = `TAREA: Extraer TODA información nutricional disponible de etiqueta extraída por OCR.
+    const cleaningPrompt = `TAREA: Extraer información nutricional "Por 100g" de etiqueta OCR.
 
-INSTRUCCIONES:
-1. Extrae TODOS los valores numéricos disponibles (calorías, grasas, grasas saturadas, colesterol, sodio, carbohidratos, fibra, azúcares, proteínas, etc.)
-2. Si un valor no está presente o es ilegible, NO lo incluyas
-3. Devuelve SOLO JSON sin explicaciones:
+INSTRUCCIONES CRÍTICAS:
+1. SOLO extrae valores de la columna "Por 100g" o "Por 100 gramos"
+2. IGNORA completamente columnas "Por porción", "Por envase", etc.
+3. Mantén TODOS los decimales (1,5 → 1,5 o 1.5, no truncar a 1)
+4. Si hay coma decimal (1,5), conviértela a punto (1.5) en el JSON
+5. Si un valor no existe en "Por 100g", NO lo incluyas
+6. Extrae: Calorías, Grasas, Grasas saturadas, Colesterol, Sodio, Carbohidratos, Fibra, Azúcares, Proteínas
+7. Devuelve SOLO este JSON (sin explicaciones):
 {"Calorías (kcal)": número, "Grasas (g)": número, "Grasas saturadas (g)": número, "Colesterol (mg)": número, "Sodio (mg)": número, "Carbohidratos (g)": número, "Fibra (g)": número, "Azúcares (g)": número, "Proteínas (g)": número}
-4. Usa exactamente los nombres de las claves mostrados arriba
-5. Solo incluye las claves cuyos valores encontraste
+
+Ejemplo correcto:
+{"Calorías (kcal)": 100, "Grasas (g)": 1.5, "Sodio (mg)": 250}
 
 Texto OCR:
 ${rawText}
 
-RESPUESTA (solo JSON con valores encontrados):`;
+RESPUESTA (SOLO JSON, sin comillas extras, con decimales):`;
 
     console.log('[Nutrition OCR] Starting AI extraction...');
 
