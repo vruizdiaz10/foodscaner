@@ -1110,6 +1110,18 @@ function renderProductData(product, barcode) {
     }
   }
 
+  // Show nutrition capture button if no nutrients available
+  const hasNutrients = product.nutriments && Object.keys(product.nutriments).length > 0;
+  const nutritionRequestBtn = document.getElementById("btn-nutrition-capture");
+  if (nutritionRequestBtn) {
+    if (!hasNutrients) {
+      nutritionRequestBtn.style.display = "block";
+      nutritionRequestBtn.onclick = () => showNutritionModal(currentBarcode);
+    } else {
+      nutritionRequestBtn.style.display = "none";
+    }
+  }
+
   if (product.isFromFallback && !product._enrichedFrom && !product.ingredientsText) {
     // Only show warning if there's no information at all (no ingredients from OFF or OCR, no enrichment)
     noNutritionAlert.classList.remove("hidden");
@@ -2070,10 +2082,86 @@ function initOcrHandlers() {
   if (overlay) overlay.onclick = hideOcrModal;
 }
 
+// Nutrition OCR Modal Functions
+function showNutritionModal(barcode) {
+  const modal = document.getElementById("nutrition-modal");
+  if (modal) {
+    modal.classList.remove("hidden");
+    document.getElementById("nutrition-step-1").classList.remove("hidden");
+    document.getElementById("nutrition-step-2").classList.add("hidden");
+    document.getElementById("nutrition-step-3").classList.add("hidden");
+    document.getElementById("nutrition-step-4").classList.add("hidden");
+  }
+}
+
+function hideNutritionModal() {
+  const modal = document.getElementById("nutrition-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function initNutritionHandlers() {
+  const closeBtn = document.getElementById("nutrition-modal-close");
+  const uploadBtn = document.getElementById("nutrition-upload-btn");
+  const photoInput = document.getElementById("nutrition-photo-input");
+  const overlay = document.getElementById("nutrition-modal-overlay");
+
+  if (uploadBtn && photoInput) {
+    uploadBtn.onclick = async () => {
+      const file = photoInput.files[0];
+      if (!file) {
+        alert("Por favor, selecciona una foto");
+        return;
+      }
+
+      document.getElementById("nutrition-step-1").classList.add("hidden");
+      document.getElementById("nutrition-step-2").classList.remove("hidden");
+
+      try {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const result = await Tesseract.recognize(e.target.result, "spa");
+          const ocrText = result.data.text;
+
+          const response = await fetch("/api/nutrition/process", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ rawText: ocrText })
+          });
+
+          if (!response.ok) throw new Error("Nutrition processing failed");
+          const data = await response.json();
+
+          const nutritionStr = Object.entries(data.nutritionData)
+            .filter(([, v]) => v !== null)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(", ");
+
+          document.getElementById("nutrition-result").value = nutritionStr;
+          document.getElementById("nutrition-step-2").classList.add("hidden");
+          document.getElementById("nutrition-step-3").classList.remove("hidden");
+        };
+        reader.readAsDataURL(file);
+      } catch (err) {
+        console.error("Nutrition OCR error:", err);
+        alert("Error al procesar nutrientes: " + err.message);
+        document.getElementById("nutrition-step-1").classList.remove("hidden");
+        document.getElementById("nutrition-step-2").classList.add("hidden");
+      }
+    };
+  }
+
+  if (closeBtn) closeBtn.onclick = hideNutritionModal;
+  if (overlay) overlay.onclick = hideNutritionModal;
+}
+
 // Call init when DOM is ready
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initOcrHandlers);
+  document.addEventListener('DOMContentLoaded', () => {
+    initOcrHandlers();
+    initNutritionHandlers();
+  });
 } else {
   initOcrHandlers();
+  initNutritionHandlers();
 }
 
