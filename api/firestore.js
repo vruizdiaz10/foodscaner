@@ -218,6 +218,26 @@ async function fireSetExtendedCache(barcode, product, source, aiAnalysis, ttlDay
   }
 }
 
+async function fireGetOcrData(barcode) {
+  try {
+    const token = await getAccessToken();
+    if (!token) return null;
+    const resp = await fetch(await docPath('products_ocr', barcode), {
+      headers: { 'Authorization': 'Bearer ' + token },
+      signal: AbortSignal.timeout(5000)
+    });
+    if (resp.status === 404) return null;
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const f = data.fields;
+    if (!f || !f._data?.stringValue) return null;
+    return JSON.parse(f._data.stringValue);
+  } catch (e) {
+    console.warn('[Firestore] getOcrData error:', e.message);
+    return null;
+  }
+}
+
 async function fireSetOcrData(barcode, ingredients) {
   try {
     const token = await getAccessToken();
@@ -243,5 +263,5 @@ async function fireSetOcrData(barcode, ingredients) {
 
 module.exports = {
   fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache,
-  fireGetVerifiedProduct, fireGetExtendedCache, fireSetExtendedCache, fireSetOcrData
+  fireGetVerifiedProduct, fireGetExtendedCache, fireSetExtendedCache, fireGetOcrData, fireSetOcrData
 };

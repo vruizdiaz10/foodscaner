@@ -3,7 +3,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const rateLimit = require('express-rate-limit');
-const { fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache, fireGetVerifiedProduct, fireGetExtendedCache, fireSetExtendedCache, fireSetOcrData } = require('./firestore');
+const { fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache, fireGetVerifiedProduct, fireGetExtendedCache, fireSetExtendedCache, fireGetOcrData, fireSetOcrData } = require('./firestore');
 
 // Load verified products database
 let verifiedProducts = {};
@@ -665,8 +665,19 @@ app.get('/api/product/:barcode', async (req, res) => {
     // Continue searching even if bestResult exists - we need complete sourceResults
     // (UPCItemDb and GTINHub are already searched above and added to sourceResults)
 
+    // Helper: Add OCR data if available
+    async function addOcrDataIfAvailable(product) {
+      const ocrData = await fireGetOcrData(barcode);
+      if (ocrData && ocrData.ingredients_ocr) {
+        product.ingredients_text = ocrData.ingredients_ocr;
+        product._from_ocr = true;
+      }
+      return product;
+    }
+
     // If we have bestResult, use it
     if (bestResult) {
+      bestResult.product = await addOcrDataIfAvailable(bestResult.product);
       const respData = { ...bestResult, sourceResults };
       await setCacheEntry(barcode, respData, bestSource, bestLastModified);
       return res.json(respData);
@@ -695,6 +706,7 @@ app.get('/api/product/:barcode', async (req, res) => {
         }
         fallbackResult.product._enrichedFrom = "USDA (por nombre)";
       }
+      fallbackResult.product = await addOcrDataIfAvailable(fallbackResult.product);
       const respData = { ...fallbackResult, sourceResults };
       await setCacheEntry(barcode, respData, "UpcItemDb", null);
       return res.json(respData);
@@ -717,6 +729,10 @@ app.get('/api/product/:barcode', async (req, res) => {
         };
         if (enrichment.saturatedFat != null) gp.nutriments['saturated-fat_100g'] = enrichment.saturatedFat;
         if (enrichment.sodium != null) gp.nutriments['sodium_100g'] = Math.round(enrichment.sodium) / 1000;
+
+        // Add OCR data if available
+        gp = await addOcrDataIfAvailable(gp);
+
         const respData = { status: 1, source: 'local', sourceLabel: 'Groq + USDA', product: gp, sourceResults };
         await setCacheEntry(barcode, respData, "Groq+USDA", null);
         return res.json(respData);
