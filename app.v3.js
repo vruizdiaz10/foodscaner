@@ -2121,29 +2121,44 @@ function initNutritionHandlers() {
       try {
         const reader = new FileReader();
         reader.onload = async (e) => {
-          const result = await Tesseract.recognize(e.target.result, "spa");
-          const ocrText = result.data.text;
+          try {
+            console.log('[Nutrition OCR] Starting with optimized config...');
+            const result = await Tesseract.recognize(e.target.result, "spa", {
+              logger: m => {
+                console.log('[Tesseract]', m.status, Math.round(m.progress * 100) + '%');
+              }
+            });
+            const ocrText = result.data.text;
+            console.log('[Nutrition OCR] Raw text length:', ocrText.length);
 
-          const response = await fetch("/api/nutrition/process", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ rawText: ocrText })
-          });
+            if (!ocrText || ocrText.trim().length < 5) {
+              throw new Error("Foto muy pequeña o borrosa. Toma una foto más clara de la etiqueta nutricional (mínimo 200x200px)");
+            }
 
-          const data = await response.json();
+            const response = await fetch("/api/nutrition/process", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ rawText: ocrText })
+            });
 
-          if (!response.ok) {
-            throw new Error(data.error || "Nutrition processing failed");
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.error || "Nutrition processing failed");
+            }
+
+            const nutritionData = data.nutritionData || {};
+            const nutritionStr = Object.entries(nutritionData)
+              .map(([k, v]) => `${k}: ${v}`)
+              .join("\n");
+
+            document.getElementById("nutrition-result").value = nutritionStr || "(Sin valores extraídos)";
+            document.getElementById("nutrition-step-2").classList.add("hidden");
+            document.getElementById("nutrition-step-3").classList.remove("hidden");
+          } catch (err) {
+            console.error("Nutrition OCR processing error:", err);
+            throw err;
           }
-
-          const nutritionData = data.nutritionData || {};
-          const nutritionStr = Object.entries(nutritionData)
-            .map(([k, v]) => `${k}: ${v}`)
-            .join("\n");
-
-          document.getElementById("nutrition-result").value = nutritionStr || "(Sin valores extraídos)";
-          document.getElementById("nutrition-step-2").classList.add("hidden");
-          document.getElementById("nutrition-step-3").classList.remove("hidden");
         };
         reader.readAsDataURL(file);
       } catch (err) {
