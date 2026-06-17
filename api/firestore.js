@@ -241,7 +241,10 @@ async function fireGetOcrData(barcode) {
 async function fireSetOcrData(barcode, ingredients) {
   try {
     const token = await getAccessToken();
-    if (!token) return;
+    if (!token) {
+      console.error('[OCR] No Firebase token available');
+      return;
+    }
     const now = Math.floor(Date.now() / 1000);
     const payload = JSON.stringify({
       barcode,
@@ -250,14 +253,25 @@ async function fireSetOcrData(barcode, ingredients) {
       approvedBy: 'auto-initial-approval',
       createdAt: now
     });
-    await fetch(await docPath('products_ocr', barcode), {
+    console.log('[OCR] Saving to Firebase:', barcode);
+    const response = await fetch(await docPath('products_ocr', barcode), {
       method: 'PATCH',
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields: { _data: { stringValue: payload } } }),
+      body: JSON.stringify({
+        fields: {
+          _data: { stringValue: payload }
+        }
+      }),
       signal: AbortSignal.timeout(5000)
     });
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('[OCR] Firebase save failed:', response.status, error);
+    } else {
+      console.log('[OCR] Saved successfully to Firebase');
+    }
   } catch (e) {
-    console.warn('[Firestore] setOcrData error:', e.message);
+    console.error('[Firestore] setOcrData error:', e.message);
   }
 }
 
