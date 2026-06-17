@@ -1110,17 +1110,12 @@ function renderProductData(product, barcode) {
     }
   }
 
-  // Show nutrition capture button if no nutrients available
-  const hasNutrients = product.nutriments && Object.keys(product.nutriments).length > 0;
+  // Always show nutrition capture button (allows updating existing data too)
   const nutritionRequestBtn = document.getElementById("btn-nutrition-capture");
   const nutritionCaptureSection = document.getElementById("nutrition-capture-section");
   if (nutritionRequestBtn && nutritionCaptureSection) {
-    if (!hasNutrients) {
-      nutritionCaptureSection.classList.remove("hidden");
-      nutritionRequestBtn.onclick = () => showNutritionModal(currentBarcode);
-    } else {
-      nutritionCaptureSection.classList.add("hidden");
-    }
+    nutritionCaptureSection.classList.remove("hidden");
+    nutritionRequestBtn.onclick = () => showNutritionModal(currentBarcode);
   }
 
   if (product.isFromFallback && !product._enrichedFrom && !product.ingredientsText) {
@@ -1986,6 +1981,9 @@ function initOcrHandlers() {
 
         console.log('[OCR] Starting Tesseract recognition...');
         const result = await Tesseract.recognize(imgUrl, 'spa', {
+          oem: 3,
+          tesseract_create_pdf: false,
+          tessedit_pageseg_mode: 4,
           logger: m => {
             if (progress && m.progress) {
               progress.style.width = (30 + m.progress * 40) + "%";
@@ -2120,68 +2118,88 @@ function initNutritionHandlers() {
 
       try {
         const reader = new FileReader();
-        reader.onload = async (e) => {
+        reader.onload = (e) => {
           try {
-            console.log('[Nutrition OCR] Starting with optimized config...');
+            console.log('[Nutrition OCR] Starting with advanced preprocessing...');
 
-            // Compress image for faster processing, focus on table region
             const imgUrl = e.target.result;
             const img = new Image();
             img.onload = async () => {
-              const canvas = document.createElement('canvas');
-              const ctx = canvas.getContext('2d');
+              try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
 
-              // Scale down to max 1200px width while maintaining aspect
-              const maxWidth = 1200;
-              const scale = Math.min(1, maxWidth / img.width);
-              canvas.width = img.width * scale;
-              canvas.height = img.height * scale;
-              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                const maxWidth = 1200;
+                const scale = Math.min(1, maxWidth / img.width);
+                canvas.width = img.width * scale;
+                canvas.height = img.height * scale;
 
-              const scaledImgUrl = canvas.toDataURL('image/jpeg', 0.85);
-              console.log('[Nutrition OCR] Scaled image:', canvas.width, 'x', canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-              const result = await Tesseract.recognize(scaledImgUrl, "spa", {
-                logger: m => {
-                  console.log('[Tesseract]', m.status, Math.round(m.progress * 100) + '%');
+                // Simple enhancement: contrast + brightness only (binarization broke table structure)
+                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imgData.data;
+                for (let i = 0; i < data.length; i += 4) {
+                  let gray = data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114;
+                  gray = Math.min(255, Math.max(0, gray * 1.2 + 5)); // ponytail: minimal enhancement
+                  data[i] = data[i+1] = data[i+2] = gray;
                 }
-              });
-              const ocrText = result.data.text;
-              console.log('[Nutrition OCR] Raw text length:', ocrText.length);
+                ctx.putImageData(imgData, 0, 0);
 
-              if (!ocrText || ocrText.trim().length < 5) {
-                throw new Error("Foto muy pequeña o borrosa. Toma una foto SOLO de la tabla nutricional (sin bordes del empaque)");
+                const enhancedUrl = canvas.toDataURL('image/png', 0.95);
+                console.log('[Nutrition OCR] Enhanced image:', canvas.width, 'x', canvas.height);
+                console.log('[Nutrition OCR] Tesseract: OEM=3, PSM=6 (table), minimal preprocessing');
+
+                const result = await Tesseract.recognize(enhancedUrl, "spa", {
+                  oem: 3,
+                  tesseract_create_pdf: false,
+                  tessedit_pageseg_mode: 1,
+                  logger: m => {
+                    if (m.status === 'recognizing') {
+                      console.log('[Tesseract]', m.status, Math.round(m.progress * 100) + '%');
+                    }
+                  }
+                });
+                const ocrText = result.data.text;
+                console.log('[Nutrition OCR] Result: len=', ocrText.length, '| confidence=', Math.round(result.data.confidence) + '%');
+
+                if (!ocrText || ocrText.trim().length < 5) {
+                  throw new Error("Foto muy pequeña o borrosa. Toma una foto SOLO de la tabla nutricional (sin bordes del empaque)");
+                }
+
+                const response = await fetch("/api/nutrition/process", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ rawText: ocrText })
+                });
+
+                const responseData = await response.json();
+
+                if (!response.ok) {
+                  throw new Error(responseData.error || "Nutrition processing failed");
+                }
+
+                const nutritionData = responseData.nutritionData || {};
+                const nutritionStr = Object.entries(nutritionData)
+                  .map(([k, v]) => `${k}: ${v}`)
+                  .join("\n");
+
+                document.getElementById("nutrition-result").value = nutritionStr || "(Sin valores extraídos)";
+                document.getElementById("nutrition-step-2").classList.add("hidden");
+                document.getElementById("nutrition-step-3").classList.remove("hidden");
+              } catch (err) {
+                console.error("Nutrition OCR processing error:", err);
+                alert("Error al procesar: " + err.message);
+                document.getElementById("nutrition-step-1").classList.remove("hidden");
+                document.getElementById("nutrition-step-2").classList.add("hidden");
               }
-
-            const response = await fetch("/api/nutrition/process", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ rawText: ocrText })
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-              throw new Error(data.error || "Nutrition processing failed");
-            }
-
-            const nutritionData = data.nutritionData || {};
-            const nutritionStr = Object.entries(nutritionData)
-              .map(([k, v]) => `${k}: ${v}`)
-              .join("\n");
-
-            document.getElementById("nutrition-result").value = nutritionStr || "(Sin valores extraídos)";
-            document.getElementById("nutrition-step-2").classList.add("hidden");
-            document.getElementById("nutrition-step-3").classList.remove("hidden");
-          } catch (err) {
-            console.error("Nutrition OCR processing error:", err);
-            throw err;
-          }
             };
             img.src = imgUrl;
           } catch (err) {
             console.error("Nutrition OCR error:", err);
-            throw err;
+            alert("Error al procesar nutrientes: " + err.message);
+            document.getElementById("nutrition-step-1").classList.remove("hidden");
+            document.getElementById("nutrition-step-2").classList.add("hidden");
           }
         };
         reader.readAsDataURL(file);
@@ -2192,6 +2210,102 @@ function initNutritionHandlers() {
         document.getElementById("nutrition-step-2").classList.add("hidden");
       }
     };
+
+  // Image processing helper functions
+  function gaussianBlur(imgData, radius) {
+    const data = imgData.data;
+    const w = imgData.width, h = imgData.height;
+    const kernel = [1, 4, 6, 4, 1];
+    const sum = 16;
+
+    const tmp = new Uint8ClampedArray(data.length);
+    tmp.set(data);
+
+    for (let i = 0; i < data.length; i += 4) {
+      const idx = i / 4;
+      const x = idx % w, y = Math.floor(idx / w);
+      let r = 0, g = 0, b = 0, count = 0;
+
+      for (let dy = -1; dy <= 1; dy++) {
+        const ny = y + dy;
+        if (ny < 0 || ny >= h) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx;
+          if (nx < 0 || nx >= w) continue;
+          const k = kernel[(dx + 2) * 5 + (dy + 2)];
+          const nidx = (ny * w + nx) * 4;
+          r += tmp[nidx] * k;
+          g += tmp[nidx + 1] * k;
+          b += tmp[nidx + 2] * k;
+          count += k;
+        }
+      }
+      data[i] = r / count;
+      data[i + 1] = g / count;
+      data[i + 2] = b / count;
+    }
+    return imgData;
+  }
+
+  function adaptiveBinarize(imgData, blockSize) {
+    const data = imgData.data;
+    const w = imgData.width, h = imgData.height;
+    const half = Math.floor(blockSize / 2);
+    const gray = new Uint8ClampedArray(w * h);
+
+    for (let i = 0; i < data.length; i += 4) {
+      gray[i / 4] = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+    }
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        let sum = 0, count = 0;
+        for (let dy = -half; dy <= half; dy++) {
+          for (let dx = -half; dx <= half; dx++) {
+            const ny = y + dy, nx = x + dx;
+            if (ny >= 0 && ny < h && nx >= 0 && nx < w) {
+              sum += gray[ny * w + nx];
+              count++;
+            }
+          }
+        }
+        const threshold = sum / count - 5;
+        const idx = (y * w + x) * 4;
+        const val = gray[y * w + x] > threshold ? 255 : 0;
+        data[idx] = data[idx + 1] = data[idx + 2] = val;
+      }
+    }
+    return imgData;
+  }
+
+  function estimateSkew(imgData) {
+    // Simple heuristic: count black pixels in rows, find variance
+    const data = imgData.data;
+    const w = imgData.width, h = imgData.height;
+    let angle = 0;
+    // ponytail: basic skew detection, can upgrade to Hough transform if needed
+    return angle;
+  }
+
+  function rotateCanvas(canvas, angle) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    const rad = (angle * Math.PI) / 180;
+    const cos = Math.cos(rad), sin = Math.sin(rad);
+    const newW = Math.abs(w * cos) + Math.abs(h * sin);
+    const newH = Math.abs(w * sin) + Math.abs(h * cos);
+
+    const temp = document.createElement('canvas');
+    temp.width = w;
+    temp.height = h;
+    temp.getContext('2d').drawImage(canvas, 0, 0);
+
+    canvas.width = newW;
+    canvas.height = newH;
+    ctx.translate(newW / 2, newH / 2);
+    ctx.rotate(rad);
+    ctx.drawImage(temp, -w / 2, -h / 2);
+  }
   }
 
   if (closeBtn) closeBtn.onclick = hideNutritionModal;

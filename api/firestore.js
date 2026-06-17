@@ -276,6 +276,7 @@ async function fireSetOcrData(barcode, ingredients) {
 }
 
 module.exports = {
+  getAccessToken,
   fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache,
   fireGetVerifiedProduct, fireGetExtendedCache, fireSetExtendedCache, fireGetOcrData, fireSetOcrData
 };

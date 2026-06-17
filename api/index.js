@@ -3,7 +3,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const rateLimit = require('express-rate-limit');
-const { fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache, fireGetVerifiedProduct, fireGetExtendedCache, fireSetExtendedCache, fireGetOcrData, fireSetOcrData } = require('./firestore');
+const { getAccessToken, fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache, fireGetVerifiedProduct, fireGetExtendedCache, fireSetExtendedCache, fireGetOcrData, fireSetOcrData } = require('./firestore');
 
 // Load verified products database
 let verifiedProducts = {};
@@ -616,7 +616,7 @@ app.get('/api/product/:barcode', async (req, res) => {
     async function identifyViaAI(barcode) {
       const prompt = `Eres un experto en identificación de productos por código de barras. El código de barras es: ${barcode}. Basado en tu conocimiento, responde ÚNICAMENTE con un objeto JSON válido sin explicaciones: { "name": "nombre del producto", "brand": "marca", "known": true }. Si NO conoces el producto, responde: { "name": "", "brand": "", "known": false }.`;
       try {
-        const content = await callAI(prompt, 'llama-3.3-70b-versatile', 150);
+        const { content } = await callAI(prompt, 'llama-3.3-70b-versatile', 150);
         const match = content.match(/\{.*\}/s);
         if (match) {
           const parsed = JSON.parse(match[0]);
@@ -1054,32 +1054,7 @@ app.get('/api/ocr/debug/:barcode', async (req, res) => {
 app.delete('/api/ocr/:barcode', async (req, res) => {
   try {
     const { barcode } = req.params;
-    const token = await (async () => {
-      const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-      if (!key) return null;
-      const sa = JSON.parse(key);
-      const jwtHeader = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
-      const now = Math.floor(Date.now() / 1000);
-      const claim = JSON.stringify({
-        iss: sa.client_email, scope: 'https://www.googleapis.com/auth/datastore',
-        aud: 'https://oauth2.googleapis.com/token', exp: now + 3600, iat: now
-      });
-      const jwtPayload = Buffer.from(claim).toString('base64url');
-      const { createSign } = require('crypto');
-      const sign = createSign('RSA-SHA256');
-      sign.update(jwtHeader + '.' + jwtPayload);
-      const signature = sign.sign(sa.private_key, 'base64url');
-      const assertion = jwtHeader + '.' + jwtPayload + '.' + signature;
-      const resp = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion })
-      });
-      if (!resp.ok) return null;
-      const data = await resp.json();
-      return data.access_token;
-    })();
-
+    const token = await getAccessToken();
     if (!token) return res.status(401).json({ error: 'No Firebase access' });
 
     const projectId = 'foodscaner-cache-v2';
@@ -1101,32 +1076,7 @@ app.delete('/api/ocr/:barcode', async (req, res) => {
 // List all OCR data in Firebase
 app.get('/api/ocr/list', async (req, res) => {
   try {
-    const token = await require('./firestore').getAccessToken?.() || (await (async () => {
-      const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-      if (!key) return null;
-      const sa = JSON.parse(key);
-      const jwtHeader = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
-      const now = Math.floor(Date.now() / 1000);
-      const claim = JSON.stringify({
-        iss: sa.client_email, scope: 'https://www.googleapis.com/auth/datastore',
-        aud: 'https://oauth2.googleapis.com/token', exp: now + 3600, iat: now
-      });
-      const jwtPayload = Buffer.from(claim).toString('base64url');
-      const { createSign } = require('crypto');
-      const sign = createSign('RSA-SHA256');
-      sign.update(jwtHeader + '.' + jwtPayload);
-      const signature = sign.sign(sa.private_key, 'base64url');
-      const assertion = jwtHeader + '.' + jwtPayload + '.' + signature;
-      const resp = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion })
-      });
-      if (!resp.ok) return null;
-      const data = await resp.json();
-      return data.access_token;
-    })());
-
+    const token = await getAccessToken();
     if (!token) return res.status(401).json({ error: 'No Firebase access' });
 
     const projectId = 'foodscaner-cache-v2';
