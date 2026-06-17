@@ -974,6 +974,64 @@ app.get('/api/ocr/debug/:barcode', async (req, res) => {
   }
 });
 
+// List all OCR data in Firebase
+app.get('/api/ocr/list', async (req, res) => {
+  try {
+    const token = await require('./firestore').getAccessToken?.() || (await (async () => {
+      const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+      if (!key) return null;
+      const sa = JSON.parse(key);
+      const jwtHeader = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
+      const now = Math.floor(Date.now() / 1000);
+      const claim = JSON.stringify({
+        iss: sa.client_email, scope: 'https://www.googleapis.com/auth/datastore',
+        aud: 'https://oauth2.googleapis.com/token', exp: now + 3600, iat: now
+      });
+      const jwtPayload = Buffer.from(claim).toString('base64url');
+      const { createSign } = require('crypto');
+      const sign = createSign('RSA-SHA256');
+      sign.update(jwtHeader + '.' + jwtPayload);
+      const signature = sign.sign(sa.private_key, 'base64url');
+      const assertion = jwtHeader + '.' + jwtPayload + '.' + signature;
+      const resp = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion })
+      });
+      if (!resp.ok) return null;
+      const data = await resp.json();
+      return data.access_token;
+    })());
+
+    if (!token) return res.status(401).json({ error: 'No Firebase access' });
+
+    const projectId = 'foodscaner-cache-v2';
+    const resp = await fetch(`https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/products_ocr`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+
+    if (!resp.ok) return res.status(resp.status).json({ error: 'Firebase query failed' });
+
+    const data = await resp.json();
+    const ocrs = data.documents?.map(doc => {
+      const barcode = doc.name.split('/').pop();
+      const fields = doc.fields;
+      const ocrData = fields._data?.stringValue ? JSON.parse(fields._data.stringValue) : null;
+      return {
+        barcode,
+        createdAt: ocrData?.createdAt,
+        approved: ocrData?.approved,
+        ingredientsLength: ocrData?.ingredients_ocr?.length || 0,
+        ingredientsPreview: ocrData?.ingredients_ocr?.substring(0, 100) || ''
+      };
+    }) || [];
+
+    res.json({ count: ocrs.length, ocrs });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Debug: Test Firebase access
 app.get('/api/debug/firebase', async (req, res) => {
   try {
