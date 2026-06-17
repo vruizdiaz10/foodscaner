@@ -1,109 +1,223 @@
-<div align="center">
-  <h1>
-    <span style="color: #10b981;">yo</span><span style="color: #f8fafc;">mi</span>
-  </h1>
-  <p><strong>¿Puedo comerlo? Escanea y lo sabes en segundos.</strong></p>
-  <p>
-    <a href="https://yomiscan.vercel.app" target="_blank">yomiscan.vercel.app</a>
-  </p>
-</div>
+# 🍎 Yomi - Identificador Nutricional de Alimentos
+
+**Yomi** es una aplicación web que identifica productos alimenticios por código de barras y proporciona análisis nutritivo, información de alérgenos, contenido de gluten y recomendaciones dietéticas mediante inteligencia artificial.
+
+**URL:** https://www.yomi.mx
 
 ---
 
-## ¿Qué es Yomi?
+## 📋 Tabla de Contenidos
 
-Yomi es un identificador nutricional de alimentos que escanea códigos de barras con tu cámara o los ingresa manualmente para obtener al instante:
-
-- ✅ **Clasificación alimento / no-alimento** — detecta si es un producto comestible
-- 🟠 **Sellos NOM-051 mexicanos** — exceso de calorías, azúcares, grasas saturadas y sodio
-- 🌿 **Tipo de dieta** — 10 atributos (vegano, halal, orgánico, etc.) con fuente (BD vs IA)
-- ⚠️ **Alérgenos** — grid de iconos detectado/trazas/libre + sección de trazas
-- 🚫 **No recomendado para** — grupos de población con certeza (rojo) o inferido por IA (amarillo)
-- 🔥 **Calorías** con barra de progreso y nivel de energía
-- 🍬 **Azúcares** con nivel según umbrales UK NHS
-- 🩺 **4 widgets de salud** — diabetes, hipertensión, colesterol, densidad calórica
-- 🧠 **Análisis con IA** — cadena de 7 proveedores (Groq → OpenRouter → Gemini)
-- ⚡ **Caché persistente** — L1 en `/tmp/` + L2 en Firestore
+- [Características](#características)
+- [Arquitectura](#arquitectura)
+- [Flujo de Búsqueda](#flujo-de-búsqueda)
+- [Sistema de Caché](#sistema-de-caché)
+- [Base de Datos](#base-de-datos)
+- [OCR de Ingredientes](#ocr-de-ingredientes)
+- [Modelos de IA](#modelos-de-ia)
+- [Stack Tecnológico](#stack-tecnológico)
 
 ---
 
-## Stack
+## ✨ Características
 
-| Capa | Tecnología |
-|------|-----------|
-| Frontend | HTML5, CSS3 (Glassmorphism), JavaScript vanilla |
-| Escáner | [html5-qrcode](https://github.com/mebjas/html5-qrcode) |
-| Backend | Node.js + Express (serverless en Vercel) |
-| APIs externas | Open Food Facts, UPCItemDb, GTINHub, USDA FoodData Central |
-| AI | Groq (5 modelos), OpenRouter, Gemini 2.5 Flash |
-| Caché L1 | JSON en `/tmp/` (TTL: 1h OFF, 24h OFF stale, 7d fuentes no-OFF) |
-| Caché L2 | Firestore (persistente entre instancias Vercel) |
-| Despliegue | [Vercel](https://vercel.com) |
+- 📱 **Escaneo de Códigos de Barras**: Captura mediante cámara web o entrada manual
+- 🔍 **Búsqueda Multi-Fuente**: Integración con 6 bases de datos de productos
+- 🧠 **Análisis con IA**: Procesamiento inteligente de datos nutricionales
+- 📸 **OCR de Ingredientes**: Captura y análisis automático de listas de ingredientes
+- ⚡ **Caché Inteligente**: L1 (memoria) y L2 (Firestore) para rendimiento óptimo
+- 🌐 **Verificación Manual**: Base de datos de productos verificados sin expiración
+- 🎨 **Interfaz Responsiva**: Diseño adaptable para móvil y desktop
+- 📊 **Análisis Completo**: Calorías, alérgenos, gluten, nutriscore, dieta
 
 ---
 
-## Pipeline de búsqueda
+## 🏗️ Arquitectura
 
 ```
-Frontend → API (Express) → Caché L1 (/tmp/) → Caché L2 (Firestore)
-  → OFF Mundial → OFF MX → USDA (por código)
-  → UPCItemDb → GTINHub → Groq + USDA (último recurso)
+Frontend (QR Scanner + Tesseract.js OCR)
+           ↓ REST API
+Backend (Express.js - Product Search, AI Analysis, Cache Management)
+           ↓
+APIs (OFF, USDA, GTINHub) + Firebase (Firestore) + AI (Groq/OpenRouter)
 ```
 
-## Pipeline de IA
+---
 
-Consulta secuencial de 7 proveedores (cada uno HTTP independiente desde el frontend):
+## 🔍 Flujo de Búsqueda
 
-1. Groq `llama-3.3-70b-versatile` (7s)
-2. Groq `llama-3.1-8b-instant` (7s)
-3. Groq `llama3-8b-8192` (7s)
-4. Groq `gemma2-9b-it` (7s)
-5. Groq `qwen-2.5-32b` (7s)
-6. OpenRouter `openrouter/free` (12s)
-7. Gemini 2.5 Flash (14s)
+### Jerarquía de Fuentes (L0 → L3)
+
+**L0: Base Verificada** (Permanente)
+- `products-verified.json`
+- Sin expiración
+- Máxima prioridad
+
+**L1: Caché en Memoria**
+- Open Food Facts: 24h TTL
+- Otros: 6h TTL
+- Respuesta <10ms
+
+**L2: Caché Firestore** (7 días)
+- `products_cache_v2` collection
+- Datos enriquecidos con IA
+- Validación por OFF last_modified_t
+
+**L3: APIs de Producto** (Fresh Fetch)
+- Open Food Facts: 🌍 Mundial, 🇲🇽 México, 🇺🇸 USA
+- USDA FoodData Central
+- UpcItemDb + GTINHub
+
+### Búsqueda Exhaustiva
+
+Se intenta todas las fuentes antes de retornar, mostrando cobertura completa en `sourceResults`.
 
 ---
 
-## Cache refresco
+## 💾 Sistema de Caché
 
-- Los datos cacheados muestran badge `📦 Caché` + botón `🔄 Actualizar`
-- Al hacer clic, se elimina el caché (L1 + Firestore) y se re-consulta desde las fuentes originales
-- `DELETE /api/cache/:barcode` — endpoint para borrado programático
+### Dos Capas
+
+| Capa | Ubicación | TTL | Velocidad |
+|------|-----------|-----|-----------|
+| L1 | Memoria RAM | 6-24h | <10ms |
+| L2 | Firestore | 7d | 100-500ms |
+
+### Validación
+
+- **Open Food Facts**: Compara `last_modified_t` con servidor
+- **Otros**: Simple TTL
+- **Stale-While-Revalidate**: Retorna caché antiguo mientras revalida
 
 ---
 
-## Ejecutar localmente
+## 🗄️ Base de Datos (Firestore)
+
+### Collections
+
+| Collection | TTL | Propósito |
+|-----------|-----|----------|
+| `products_verified` | ∞ | Productos verificados manualmente |
+| `products_cache_v2` | 7d | Cache enriquecido con IA |
+| `ai_cache` | 24h | Resultados de análisis IA |
+| `products_ocr` | ∞ | Ingredientes capturados por OCR |
+
+### Estructura (products_verified)
+
+```json
+{
+  "barcode": {
+    "name": "Nombre",
+    "brand": "Marca",
+    "ingredients": "texto",
+    "allergens": ["array"],
+    "gluten": {"hasGluten": bool, "details": "info"},
+    "calories": {"value": num, "level": "str", "percent": num},
+    "verified": true,
+    "source": "manual"
+  }
+}
+```
+
+---
+
+## 📸 OCR de Ingredientes
+
+### Flujo E2E
+
+1. **Tesseract.js** → OCR de foto en navegador
+2. **Queue + Groq** → 5 modelos en paralelo (2.5s delay entre llamadas)
+3. **LLM** → Limpieza, corrección, normalización
+4. **Firebase** → Guardado permanente en `products_ocr`
+5. **Rescaneo** → Ingredientes aparecen automáticamente
+
+### Rate Limiting
+
+- Delay de **2.5 segundos** entre llamadas a Groq
+- Evita error 429 (Too Many Requests)
+- Procesa serialmente con queue
+
+---
+
+## 🤖 Modelos de IA
+
+### Groq (Preferido)
+- Velocidad: 1-3 segundos
+- Modelos: llama-3.3-70b, llama-3.1-8b-instant, gemma-7b-it, mixtral-8x7b
+- Costo: ~$0.59-0.79 / MTok
+
+### OpenRouter (Fallback)
+- Modelo: Free tier
+- Sin rate limiting
+- Si Groq falla
+
+---
+
+## 🛠️ Stack Tecnológico
+
+**Frontend**: HTML5, CSS3, Vanilla JS  
+**Libraries**: html5-qrcode (QR), Tesseract.js (OCR)  
+**Backend**: Express.js, Node.js 24  
+**Database**: Firebase Firestore  
+**AI**: Groq API, OpenRouter  
+**Hosting**: Vercel  
+
+---
+
+## 📦 Setup
 
 ```bash
+git clone https://github.com/vruiz-wadil/foodscaner.git
+cd foodscaner
 npm install
-npm start
-# Abre http://localhost:3000
-```
-
-## Variables de entorno
-
-- `GROQ_API_KEY` — console.groq.com
-- `USDA_API_KEY` — fdc.nal.usda.gov
-- `OPENROUTER_API_KEY` — openrouter.ai
-- `GEMINI_API_KEY` — aistudio.google.com
-- `FIREBASE_SERVICE_ACCOUNT_KEY` — JSON completo del service account (Firestore)
-
-## Despliegue
-
-```bash
-npx vercel --prod
+cp .env.example .env  # Add credentials
+npm run dev          # Local
+vercel deploy --prod # Production
 ```
 
 ---
 
-## Tests
+## 🔐 Environment Variables
 
-```bash
-npm test        # 44 tests (11 backend + 33 frontend)
+```env
+FIREBASE_SERVICE_ACCOUNT_KEY={"type":"service_account",...}
+GROQ_API_KEY=gsk_...
+OPENROUTER_API_KEY=sk-or-...
+GEMINI_API_KEY=AIza...
 ```
 
 ---
 
-## Licencia
+## 📊 Debugging
 
-Datos nutricionales: [Open Food Facts](https://world.openfoodfacts.org/) (ODbL) · [UPCItemDb](https://www.upcitemdb.com/) · [GTINHub](https://www.gtinhub.com/) · [USDA FoodData Central](https://fdc.nal.usda.gov/) · [Groq](https://groq.com/)
+```bash
+# Firebase credentials check
+curl https://www.yomi.mx/api/debug/firebase
+
+# OCR data in Firebase
+curl https://www.yomi.mx/api/ocr/debug/7501011169630
+
+# View logs
+vercel logs https://foodscaner-xxx.vercel.app --level error
+```
+
+---
+
+## 🤝 Contributing
+
+1. Fork → Branch → Commit → Push → PR
+2. Test locally before submitting
+3. Follow existing code style
+
+---
+
+## 📝 License
+
+MIT License
+
+---
+
+## 🔗 Links
+
+- **Website**: https://www.yomi.mx
+- **Email**: soporte@wadilworks.com
