@@ -1113,12 +1113,13 @@ function renderProductData(product, barcode) {
   // Show nutrition capture button if no nutrients available
   const hasNutrients = product.nutriments && Object.keys(product.nutriments).length > 0;
   const nutritionRequestBtn = document.getElementById("btn-nutrition-capture");
-  if (nutritionRequestBtn) {
+  const nutritionCaptureSection = document.getElementById("nutrition-capture-section");
+  if (nutritionRequestBtn && nutritionCaptureSection) {
     if (!hasNutrients) {
-      nutritionRequestBtn.style.display = "block";
+      nutritionCaptureSection.classList.remove("hidden");
       nutritionRequestBtn.onclick = () => showNutritionModal(currentBarcode);
     } else {
-      nutritionRequestBtn.style.display = "none";
+      nutritionCaptureSection.classList.add("hidden");
     }
   }
 
