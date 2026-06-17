@@ -540,8 +540,14 @@ function parseApiProduct(product) {
   // Gluten Dectector Logic
   // Open Food Facts tags allergens/ingredients containing gluten
   const ingredientsText = (product.ingredients_text || "").toLowerCase();
-  const tracesText = (product.traces || "").toLowerCase();
+  let tracesText = (product.traces || "").toLowerCase();
   const allergensTags = (product.allergens_tags || []).map(t => t.toLowerCase());
+
+  // Filter out non-allergen garbage like "NUEVO" from traces field
+  tracesText = tracesText.split(",").filter(t => {
+    const word = t.trim().toLowerCase();
+    return !["nuevo", "desconocido", "undefined", "unknown"].includes(word);
+  }).join(",");
 
   const hasGlutenAllergenTag = allergensTags.some(tag => tag.includes("gluten") || tag.includes("wheat") || tag.includes("trigo"));
   const hasGlutenInTraces = /gluten|wheat|trigo/.test(tracesText);
