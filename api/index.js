@@ -996,26 +996,28 @@ RESPUESTA (SOLO JSON, valores exactos del "Por 100g"):`;
       'llama-3.3-70b-versatile'
     ];
 
-    const results = await Promise.allSettled(
-      groqModels.map(m => queueGroqCall(cleaningPrompt, m, 800))
-    );
-
+    // Try models in sequence, fast-fail on first valid JSON
     let cleanedText = null;
-    for (let i = 0; i < results.length; i++) {
-      const r = results[i];
-      if (r.status === 'fulfilled' && r.value?.content) {
-        cleanedText = r.value.content.trim();
-        try {
-          JSON.parse(cleanedText);
-          console.log('[Nutrition OCR] Valid JSON extracted');
-          break;
-        } catch (e) {
-          console.warn('[Nutrition OCR] Invalid JSON from model', i);
+    for (const model of groqModels) {
+      try {
+        const result = await queueGroqCall(cleaningPrompt, model, 5000);
+        if (result?.content) {
+          const trimmed = result.content.trim();
+          try {
+            JSON.parse(trimmed);
+            cleanedText = trimmed;
+            console.log('[Nutrition OCR] Valid JSON from model:', model);
+            break;
+          } catch (e) {
+            console.warn('[Nutrition OCR] Invalid JSON from', model, ':', trimmed.substring(0, 100));
+          }
         }
+      } catch (e) {
+        console.warn('[Nutrition OCR] Model', model, 'failed:', e.message);
       }
     }
 
-    if (!cleanedText) throw new Error("No valid nutrition data extracted");
+    if (!cleanedText) throw new Error("No valid nutrition data extracted from any model");
 
     res.json({ status: 'ok', nutritionData: JSON.parse(cleanedText) });
   } catch (error) {
