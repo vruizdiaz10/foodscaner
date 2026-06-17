@@ -1146,13 +1146,18 @@ function renderProductData(product, barcode) {
 
   // Render Calories Card details
   const noCalData = product.calories.value === 0 || product.calories.level === "No Especificado";
-  caloriesVal.querySelector(".number").textContent = noCalData ? "—" : fmt(product.calories.value);
-  caloriesProgress.style.width = noCalData ? "0%" : `${product.calories.percent}%`;
-  caloriesLevel.textContent = noCalData ? "Sin datos nutricionales" : `Nivel de energía: ${product.calories.level}`;
-  cardCalories.className = "analysis-card";
-  styleCard(caloriesLevel, caloriesProgress, product.calories.level,
-    lvlCls("level-indicator calories-", "high", "mod", "low"),
-    lvlBg("var(--accent-error)", "var(--accent-alert)", "var(--accent-primary)"));
+  if (noCalData) {
+    cardCalories.classList.add("hidden");
+  } else {
+    cardCalories.classList.remove("hidden");
+    caloriesVal.querySelector(".number").textContent = fmt(product.calories.value);
+    caloriesProgress.style.width = `${product.calories.percent}%`;
+    caloriesLevel.textContent = `Nivel de energía: ${product.calories.level}`;
+    cardCalories.className = "analysis-card";
+    styleCard(caloriesLevel, caloriesProgress, product.calories.level,
+      lvlCls("level-indicator calories-", "high", "mod", "low"),
+      lvlBg("var(--accent-error)", "var(--accent-alert)", "var(--accent-primary)"));
+  }
 
   // Render Sugars Card
   if (product.sugars && product.sugars.value !== null) {
