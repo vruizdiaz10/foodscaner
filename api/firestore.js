@@ -315,6 +315,15 @@ async function fireSetOcrData(barcode, ingredients) {
   }
 }
 
+async function fireDeleteDoc(col, id) {
+  try {
+    const token = await getAccessToken();
+    if (!token) return false;
+    const resp = await fetch(docPath(col, id), { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token }, signal: AbortSignal.timeout(5000) });
+    return resp.ok;
+  } catch (e) { return false; }
+}
+
 async function fireListCollection(col) {
   try {
     const token = await getAccessToken();
@@ -335,5 +344,5 @@ module.exports = {
   getAccessToken,
   fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache,
   fireGetVerifiedProduct, fireGetExtendedCache, fireSetExtendedCache, fireGetOcrData, fireSetOcrData,
-  fireGetNutritionOcr, fireSetNutritionOcr, fireListCollection
+  fireGetNutritionOcr, fireSetNutritionOcr, fireListCollection, fireDeleteDoc
 };

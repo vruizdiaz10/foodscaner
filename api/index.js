@@ -3,7 +3,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const rateLimit = require('express-rate-limit');
-const { getAccessToken, fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache, fireGetVerifiedProduct, fireGetExtendedCache, fireSetExtendedCache, fireGetOcrData, fireSetOcrData, fireGetNutritionOcr, fireSetNutritionOcr, fireListCollection } = require('./firestore');
+const { getAccessToken, fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache, fireGetVerifiedProduct, fireGetExtendedCache, fireSetExtendedCache, fireGetOcrData, fireSetOcrData, fireGetNutritionOcr, fireSetNutritionOcr, fireListCollection, fireDeleteDoc } = require('./firestore');
 
 // Load verified products database
 let verifiedProducts = {};
@@ -1131,6 +1131,26 @@ app.get('/api/ocr/list', async (req, res) => {
       ingredients: ingredients.map(e => ({ barcode: e.barcode, hasData: !!e.data?.ingredients_ocr, createdAt: e.data?.createdAt })),
       nutrition: nutrition.map(e => ({ barcode: e.barcode, hasData: !!e.data?.nutritionData, createdAt: e.data?.createdAt })),
     });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Delete all OCR data from Firebase (ingredients + nutrition)
+app.delete('/api/ocr/all', async (req, res) => {
+  try {
+    const [ingredients, nutrition] = await Promise.all([
+      fireListCollection('products_ocr'),
+      fireListCollection('products_nutrition')
+    ]);
+    const results = await Promise.all([
+      ...ingredients.map(e => fireDeleteDoc('products_ocr', e.barcode).then(ok => ({ col: 'products_ocr', barcode: e.barcode, ok }))),
+      ...nutrition.map(e => fireDeleteDoc('products_nutrition', e.barcode).then(ok => ({ col: 'products_nutrition', barcode: e.barcode, ok })))
+    ]);
+    // Also clear memory cache for affected barcodes
+    const barcodes = new Set([...ingredients.map(e => e.barcode), ...nutrition.map(e => e.barcode)]);
+    for (const b of barcodes) await removeCacheEntry(b);
+    res.json({ deleted: results.length, results });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
