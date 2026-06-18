@@ -20,7 +20,7 @@ try {
 const app = express();
 
 app.use(express.static(path.join(__dirname, '..')));
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 
 const limiter = rateLimit({ windowMs: 60000, max: 30, message: { error: "Demasiadas solicitudes. Intenta de nuevo en 1 minuto." } });
 app.use('/api/', limiter);
@@ -163,6 +163,29 @@ async function callGroq(prompt, model = 'llama-3.3-70b-versatile', max_tokens = 
   if (!response.ok) throw new Error(`Groq error: ${response.status}`);
   const data = await response.json();
   return { content: data.choices?.[0]?.message?.content || "", model: "Groq: " + model };
+}
+
+async function callGroqVision(imageBase64, prompt, model = 'meta-llama/llama-4-scout-17b-16e-instruct', max_tokens = 500) {
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model, max_tokens, temperature: 0.1,
+      messages: [{ role: 'user', content: [
+        { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
+        { type: 'text', text: prompt }
+      ]}]
+    }),
+    signal: AbortSignal.timeout(8000)
+  });
+  if (response.status === 429) throw new Error("Límite de velocidad excedido en Groq.");
+  if (!response.ok) {
+    const errBody = await response.text();
+    console.error('[Groq Vision] Error body:', errBody.substring(0, 500));
+    throw new Error(`Groq vision error: ${response.status}`);
+  }
+  const data = await response.json();
+  return { content: data.choices?.[0]?.message?.content || "" };
 }
 
 async function callOpenRouter(prompt) {
@@ -960,77 +983,47 @@ RESPUESTA (solo lista de ingredientes):`;
   }
 });
 
-// Process nutrition OCR text with AI
+// Process nutrition from image using vision LLM (no Tesseract)
 app.post('/api/nutrition/process', async (req, res) => {
   try {
-    const { rawText } = req.body;
-    if (!rawText) {
-      return res.status(400).json({ error: 'Missing rawText' });
-    }
+    const { imageData } = req.body;
+    if (!imageData) return res.status(400).json({ error: 'Missing imageData' });
 
-    const cleaningPrompt = `TAREA: Lee el OCR y extrae SOLO "Por 100g" (o "Per 100g").
+    const prompt = `Eres un experto en etiquetas nutricionales. Analiza esta imagen y extrae SOLO los valores "Por 100g" (o "Per 100g").
 
 REGLAS:
-- IGNORA completamente "Por porción", "Por serving", "Per portion"
-- EXTRAE SOLO lo que APARECE en el texto
-- OMITE completamente cualquier nutriente que NO APAREZCA (no uses 0, no lo incluyas en el JSON)
+- IGNORA "Por porción", "Per serving", "Per portion"
+- OMITE nutrientes que no aparezcan (no uses 0)
 - Convierte comas a puntos (1,3 → 1.3)
-- Devuelve JSON VÁLIDO, sin comentarios, sin markdown, sin explicaciones
+- Devuelve SOLO JSON válido, sin markdown, sin comentarios
 
-Ejemplo: Si el texto dice "Por 100g: Energía 150 kcal, Grasas 2g"
-Devuelve: {"calories": 150, "fat": 2}
-NO devuelvas: {"calories": 150, "fat": 2, "saturated_fat": 0, "sodium": 0, ...}
+Claves permitidas: calorias, grasas, grasas_saturadas, grasas_trans, carbohidratos, fibra, azucares, azucares_añadidos, proteinas, sodio
 
-Texto OCR:
-${rawText}
+Ejemplo: {"calorias": 150, "grasas": 2, "proteinas": 5}
 
-RESPUESTA (SOLO JSON válido, nada más):
-{}`;
+RESPUESTA (SOLO JSON):`;
 
-    console.log('[Nutrition OCR] Starting AI extraction...');
+    console.log('[Nutrition Vision] Calling Groq vision...');
+    const result = await callGroqVision(imageData, prompt);
 
-    // ponytail: single fast model, minimal delay for Vercel function timeout (~10s on free tier)
-    try {
-      const result = await queueGroqCall(cleaningPrompt, 'llama-3.1-8b-instant', 2500, 500);
-      if (result?.content) {
-        console.log('[Nutrition OCR] Raw response:', result.content.substring(0, 300));
-        let trimmed = result.content.trim();
-        // Extract JSON from markdown code blocks if wrapped
-        const jsonMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
-        if (jsonMatch) {
-          console.log('[Nutrition OCR] Extracted from code block');
-          trimmed = jsonMatch[1].trim();
-        }
-        // Remove comments before JSON parsing
-        trimmed = trimmed.replace(/\/\/.*?$/gm, '').trim();
+    if (!result?.content) throw new Error("No response from vision LLM");
 
-        console.log('[Nutrition OCR] Cleaned text:', trimmed.substring(0, 200));
-        try {
-          const parsed = JSON.parse(trimmed);
-          const keyCount = Object.keys(parsed).length;
-          console.log('[Nutrition OCR] ✓ JSON valid, keys:', keyCount);
+    let trimmed = result.content.trim();
+    const jsonMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (jsonMatch) trimmed = jsonMatch[1].trim();
+    trimmed = trimmed.replace(/\/\/.*?$/gm, '').trim();
 
-          if (keyCount === 0) {
-            console.warn('[Nutrition OCR] ⚠️ Empty JSON - OCR text may be unreadable');
-            // Return error so frontend shows message instead of empty textarea
-            return res.status(400).json({
-              error: 'No se encontraron valores nutricionales. Intenta con una foto más clara de la etiqueta.'
-            });
-          }
+    const parsed = JSON.parse(trimmed);
+    const keyCount = Object.keys(parsed).length;
+    console.log('[Nutrition Vision] ✓ keys:', keyCount);
 
-          return res.json({ status: 'ok', nutritionData: parsed });
-        } catch (e) {
-          console.error('[Nutrition OCR] ✗ Parse error:', e.message);
-          throw new Error("Failed to parse nutrition data as JSON");
-        }
-      }
-      throw new Error("No response from LLM");
-    } catch (e) {
-      console.error('[Nutrition OCR] Extraction failed:', e.message);
-      throw e;
+    if (keyCount === 0) {
+      return res.status(400).json({ error: 'No se encontraron valores nutricionales. Intenta con una foto más clara de la tabla.' });
     }
+
+    return res.json({ status: 'ok', nutritionData: parsed });
   } catch (error) {
-    console.error('[Nutrition OCR] Error:', error);
+    console.error('[Nutrition Vision] Error:', error);
     res.status(500).json({ error: 'Error al procesar nutrientes: ' + (error?.message || error) });
   }
 });
