@@ -2051,7 +2051,11 @@ function initOcrHandlers() {
   }
 
   if (closeBtn) closeBtn.onclick = hideOcrModal;
-  if (finalCloseBtn) finalCloseBtn.onclick = hideOcrModal;
+  if (finalCloseBtn) finalCloseBtn.onclick = () => {
+    const b = currentBarcode;
+    hideOcrModal();
+    if (b) analyzeBarcode(b);
+  };
 
   const overlay = document.querySelector(".modal-overlay");
   if (overlay) overlay.onclick = hideOcrModal;
@@ -2139,6 +2143,50 @@ function initNutritionHandlers() {
       }
     };
   }
+
+  const saveBtn = document.getElementById("nutrition-save-btn");
+  const finalCloseBtn = document.getElementById("nutrition-close-btn");
+  const editBtn = document.getElementById("nutrition-edit-btn");
+
+  if (editBtn) editBtn.onclick = () => {
+    document.getElementById("nutrition-result").removeAttribute("readonly");
+    editBtn.style.display = "none";
+  };
+
+  if (saveBtn) saveBtn.onclick = async () => {
+    if (!currentBarcode) return;
+    saveBtn.disabled = true;
+    const original = saveBtn.textContent;
+    saveBtn.textContent = "💾 Guardando...";
+
+    const textareaVal = document.getElementById("nutrition-result").value || "";
+    const nutritionData = {};
+    textareaVal.split("\n").forEach(line => {
+      const idx = line.indexOf(":");
+      if (idx > 0) nutritionData[line.slice(0, idx).trim()] = line.slice(idx + 1).trim();
+    });
+
+    try {
+      const response = await fetch("/api/products/nutrition", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ barcode: currentBarcode, nutritionData })
+      });
+      if (!response.ok) throw new Error(`Error ${response.status}`);
+      document.getElementById("nutrition-step-3").classList.add("hidden");
+      document.getElementById("nutrition-step-4").classList.remove("hidden");
+    } catch (err) {
+      alert("Error al guardar: " + err.message);
+      saveBtn.disabled = false;
+      saveBtn.textContent = original;
+    }
+  };
+
+  if (finalCloseBtn) finalCloseBtn.onclick = () => {
+    const b = currentBarcode;
+    hideNutritionModal();
+    if (b) analyzeBarcode(b);
+  };
 
   if (closeBtn) closeBtn.onclick = hideNutritionModal;
   if (overlay) overlay.onclick = hideNutritionModal;

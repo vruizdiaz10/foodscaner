@@ -3,7 +3,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const rateLimit = require('express-rate-limit');
-const { getAccessToken, fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache, fireGetVerifiedProduct, fireGetExtendedCache, fireSetExtendedCache, fireGetOcrData, fireSetOcrData } = require('./firestore');
+const { getAccessToken, fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache, fireGetVerifiedProduct, fireGetExtendedCache, fireSetExtendedCache, fireGetOcrData, fireSetOcrData, fireGetNutritionOcr, fireSetNutritionOcr } = require('./firestore');
 
 // Load verified products database
 let verifiedProducts = {};
@@ -689,15 +689,42 @@ app.get('/api/product/:barcode', async (req, res) => {
     // Continue searching even if bestResult exists - we need complete sourceResults
     // (UPCItemDb and GTINHub are already searched above and added to sourceResults)
 
-    // Helper: Add OCR data if available
+    // Helper: inject user-captured OCR ingredients and nutrition into product
     async function addOcrDataIfAvailable(product) {
-      const ocrData = await fireGetOcrData(barcode);
-      console.log('[OCR] Checking OCR data for', barcode, '- found:', !!ocrData);
-      if (ocrData && ocrData.ingredients_ocr) {
-        console.log('[OCR] Adding ingredients from OCR');
+      const [ocrData, nutritionOcr] = await Promise.all([
+        fireGetOcrData(barcode),
+        fireGetNutritionOcr(barcode)
+      ]);
+
+      if (ocrData?.ingredients_ocr) {
         product.ingredients_text = ocrData.ingredients_ocr;
         product._from_ocr = true;
       }
+
+      if (nutritionOcr?.nutritionData) {
+        const nd = nutritionOcr.nutritionData;
+        const nutVal = s => { const m = String(s || '').match(/[\d.]+/); return m ? parseFloat(m[0]) : null; };
+        const NUT_MAP = {
+          calorias: 'energy-kcal_100g', grasas: 'fat_100g',
+          grasas_saturadas: 'saturated-fat_100g', grasas_trans: 'trans-fat_100g',
+          carbohidratos: 'carbohydrates_100g', fibra: 'fiber_100g',
+          azucares: 'sugars_100g', proteinas: 'proteins_100g'
+        };
+        if (!product.nutriments) product.nutriments = {};
+        for (const [k, v] of Object.entries(nd)) {
+          const key = NUT_MAP[k];
+          if (key && product.nutriments[key] == null) { const n = nutVal(v); if (n != null) product.nutriments[key] = n; }
+          if (k === 'sodio' && product.nutriments['sodium_100g'] == null) { const n = nutVal(v); if (n != null) product.nutriments['sodium_100g'] = n / 1000; }
+        }
+        // Also set direct fields used by AI for local (non-OFF) products
+        if (product.sugars == null && nd.azucares != null) { const n = nutVal(nd.azucares); if (n != null) product.sugars = { value: n }; }
+        if (product.carbohydrates == null && nd.carbohidratos != null) {
+          const c = nutVal(nd.carbohidratos), f = nutVal(nd.fibra);
+          if (c != null) product.carbohydrates = { value: c, fiber: f };
+        }
+        product._from_nutrition_ocr = true;
+      }
+
       return product;
     }
 
@@ -919,6 +946,19 @@ app.post('/api/cache/refresh/:barcode', async (req, res) => {
   } catch (error) {
     console.error('[REFRESH] Error:', error.message);
     res.status(500).json({ error: 'Error al refrescar caché' });
+  }
+});
+
+// Save captured nutrition data to Firebase
+app.post('/api/products/nutrition', async (req, res) => {
+  try {
+    const { barcode, nutritionData } = req.body;
+    if (!barcode || !nutritionData) return res.status(400).json({ error: 'Missing barcode or nutritionData' });
+    await removeCacheEntry(barcode);
+    await fireSetNutritionOcr(barcode, nutritionData);
+    res.json({ status: 'ok', barcode });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al guardar nutrición: ' + error.message });
   }
 });
 
