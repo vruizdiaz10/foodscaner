@@ -280,8 +280,9 @@ app.get('/api/product/:barcode', async (req, res) => {
 
     // ----- L0: VERIFIED PRODUCTS (Permanent) -----
     if (verifiedProducts[barcode]) {
-      const verified = verifiedProducts[barcode];
+      let verified = { ...verifiedProducts[barcode] };
       console.log(`[VERIFIED] Found: ${barcode}`);
+      verified = await addOcrDataIfAvailable(verified);
       return res.json({
         status: 1,
         source: 'local',
