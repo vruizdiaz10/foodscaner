@@ -2053,6 +2053,8 @@ function initOcrHandlers() {
 
         document.getElementById("ocr-step-3").classList.add("hidden");
         document.getElementById("ocr-step-4").classList.remove("hidden");
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
       } catch (err) {
         console.error("Save error:", err);
         alert("Error al guardar: " + err.message);
@@ -2184,6 +2186,8 @@ function initNutritionHandlers() {
       if (!response.ok) throw new Error(`Error ${response.status}`);
       document.getElementById("nutrition-step-3").classList.add("hidden");
       document.getElementById("nutrition-step-4").classList.remove("hidden");
+      saveBtn.disabled = false;
+      saveBtn.textContent = original;
     } catch (err) {
       alert("Error al guardar: " + err.message);
       saveBtn.disabled = false;
