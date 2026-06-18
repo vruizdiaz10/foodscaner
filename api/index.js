@@ -995,11 +995,12 @@ REGLAS:
 - IGNORA "Por porción", "Per serving", "Per portion"
 - OMITE nutrientes que no aparezcan (no uses 0)
 - Convierte comas a puntos (1,3 → 1.3)
+- Incluye la unidad en el valor (kcal, g, mg, etc.)
 - Devuelve SOLO JSON válido, sin markdown, sin comentarios
 
 Claves permitidas: calorias, grasas, grasas_saturadas, grasas_trans, carbohidratos, fibra, azucares, azucares_añadidos, proteinas, sodio
 
-Ejemplo: {"calorias": 150, "grasas": 2, "proteinas": 5}
+Ejemplo: {"calorias": "150 kcal", "grasas": "2 g", "proteinas": "5 g", "sodio": "320 mg"}
 
 RESPUESTA (SOLO JSON):`;
 
