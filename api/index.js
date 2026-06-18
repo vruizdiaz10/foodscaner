@@ -214,7 +214,7 @@ async function callGemini(prompt) {
   return { content: data.candidates?.[0]?.content?.parts?.[0]?.text || "", model: "Gemini 2.5 Flash" };
 }
 
-async function callAI(prompt, groqModel = 'llama-3.3-70b-versatile', max_tokens = 3000) {
+async function callAI(prompt, max_tokens = 3000) {
   if (!process.env.GROQ_API_KEY) return callOpenRouter(prompt);
 
   // Todos los modelos de Groq en paralelo + OpenRouter
@@ -639,7 +639,7 @@ app.get('/api/product/:barcode', async (req, res) => {
     async function identifyViaAI(barcode) {
       const prompt = `Eres un experto en identificación de productos por código de barras. El código de barras es: ${barcode}. Basado en tu conocimiento, responde ÚNICAMENTE con un objeto JSON válido sin explicaciones: { "name": "nombre del producto", "brand": "marca", "known": true }. Si NO conoces el producto, responde: { "name": "", "brand": "", "known": false }.`;
       try {
-        const { content } = await callAI(prompt, 'llama-3.3-70b-versatile', 150);
+        const { content } = await callAI(prompt, 150);
         const match = content.match(/\{.*\}/s);
         if (match) {
           const parsed = JSON.parse(match[0]);

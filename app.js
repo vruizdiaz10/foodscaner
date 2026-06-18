@@ -467,7 +467,7 @@ function renderDietaryBadges(product) {
 
   const defaultLabels = { vegan: "🌱 Vegano", vegetarian: "🥦 Vegetariano", kosher: "✡️ Kosher", halal: "🌙 Halal", organic: "🌿 Orgánico", nonGmo: "🧬 Sin OGM", noAdditives: "🧪 Sin Aditivos", palmOilFree: "🌴 Sin Aceite de Palma", fairTrade: "🤝 Comercio Justo" };
 
-  function makeDietRow(dietVal, source, detailId, dietName, label, attrId) {
+  function makeDietRow(dietVal, source, dietName, label, attrId) {
     const statusEl = { vegan: veganStatus, vegetarian: vegStatus, kosher: kosherStatus, halal: halalStatus, organic: organicStatus, nonGmo: nonGmoStatus, noAdditives: noAdditivesStatus, palmOilFree: palmOilFreeStatus, fairTrade: fairTradeStatus }[label];
     const rowEl = getRow(attrId);
     const detailEl = { vegan: veganDetail, vegetarian: vegDetail, kosher: kosherDetail, halal: halalDetail, organic: organicDetail, nonGmo: nonGmoDetail, noAdditives: noAdditivesDetail, palmOilFree: palmOilFreeDetail, fairTrade: fairTradeDetail }[label];
@@ -500,7 +500,7 @@ function renderDietaryBadges(product) {
     { val: d.palmOilFree, src: d.palmOilFreeSource, label: "palmOilFree", dietName: "libre de aceite de palma", attrId: "dietary-palm-oil-free-attr" },
     { val: d.fairTrade, src: d.fairTradeSource, label: "fairTrade", dietName: "de comercio justo", attrId: "dietary-fair-trade-attr" }
   ];
-  dietMeta.forEach(m => makeDietRow(m.val, m.src, m.label, m.dietName, m.label, m.attrId));
+  dietMeta.forEach(m => makeDietRow(m.val, m.src, m.dietName, m.label, m.attrId));
   if (section) section.classList.remove("hidden");
 }
 

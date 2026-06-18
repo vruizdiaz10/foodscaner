@@ -8,7 +8,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const appCode = fs.readFileSync(path.join(__dirname, '..', 'app.v3.js'), 'utf8')
+const appCode = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8')
 
 let parseApiProduct, isGlutenRelated, extractDietaryFromLabels
 

@@ -60,7 +60,7 @@ function getProjectId() {
   return _projectId || 'foodscaner-cache-v2';
 }
 
-async function docPath(col, id) {
+function docPath(col, id) {
   return `${BASE}/projects/${getProjectId()}/databases/(default)/documents/${encodeURIComponent(col)}/${encodeURIComponent(id)}`;
 }
 
@@ -68,7 +68,7 @@ async function fireGetCache(barcode) {
   try {
     const token = await getAccessToken();
     if (!token) return null;
-    const resp = await fetch(await docPath('product_cache', barcode), {
+    const resp = await fetch(docPath('product_cache', barcode), {
       headers: { 'Authorization': 'Bearer ' + token },
       signal: AbortSignal.timeout(5000)
     });
@@ -89,7 +89,7 @@ async function fireSetCache(barcode, response, source, offLastModified = null) {
     const token = await getAccessToken();
     if (!token) return;
     const payload = JSON.stringify({ response, source, offLastModified, cachedAt: Math.floor(Date.now() / 1000) });
-    await fetch(await docPath('product_cache', barcode), {
+    await fetch(docPath('product_cache', barcode), {
       method: 'PATCH',
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields: { _data: { stringValue: payload } } }),
@@ -104,7 +104,7 @@ async function fireRemoveCache(barcode) {
   try {
     const token = await getAccessToken();
     if (!token) return;
-    await fetch(await docPath('product_cache', barcode), {
+    await fetch(docPath('product_cache', barcode), {
       method: 'DELETE',
       headers: { 'Authorization': 'Bearer ' + token },
       signal: AbortSignal.timeout(5000)
@@ -118,7 +118,7 @@ async function fireGetAiCache(key) {
   try {
     const token = await getAccessToken();
     if (!token) return null;
-    const resp = await fetch(await docPath('ai_cache', key), {
+    const resp = await fetch(docPath('ai_cache', key), {
       headers: { 'Authorization': 'Bearer ' + token },
       signal: AbortSignal.timeout(5000)
     });
@@ -142,7 +142,7 @@ async function fireSetAiCache(key, response) {
     const token = await getAccessToken();
     if (!token) return;
     const payload = JSON.stringify({ response, cachedAt: Math.floor(Date.now() / 1000) });
-    await fetch(await docPath('ai_cache', key), {
+    await fetch(docPath('ai_cache', key), {
       method: 'PATCH',
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields: { _data: { stringValue: payload } } }),
@@ -158,7 +158,7 @@ async function fireGetVerifiedProduct(barcode) {
   try {
     const token = await getAccessToken();
     if (!token) return null;
-    const resp = await fetch(await docPath('products_verified', barcode), {
+    const resp = await fetch(docPath('products_verified', barcode), {
       headers: { 'Authorization': 'Bearer ' + token },
       signal: AbortSignal.timeout(5000)
     });
@@ -179,7 +179,7 @@ async function fireGetExtendedCache(barcode) {
   try {
     const token = await getAccessToken();
     if (!token) return null;
-    const resp = await fetch(await docPath('products_cache_v2', barcode), {
+    const resp = await fetch(docPath('products_cache_v2', barcode), {
       headers: { 'Authorization': 'Bearer ' + token },
       signal: AbortSignal.timeout(5000)
     });
@@ -211,7 +211,7 @@ async function fireSetExtendedCache(barcode, product, source, aiAnalysis, ttlDay
       expiresIn: ttlDays * 24 * 60 * 60,
       analysisModel: process.env.AI_MODEL || 'groq-llama-3.3-70b'
     });
-    await fetch(await docPath('products_cache_v2', barcode), {
+    await fetch(docPath('products_cache_v2', barcode), {
       method: 'PATCH',
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields: { _data: { stringValue: payload } } }),
@@ -226,7 +226,7 @@ async function fireGetOcrData(barcode) {
   try {
     const token = await getAccessToken();
     if (!token) return null;
-    const resp = await fetch(await docPath('products_ocr', barcode), {
+    const resp = await fetch(docPath('products_ocr', barcode), {
       headers: { 'Authorization': 'Bearer ' + token },
       signal: AbortSignal.timeout(5000)
     });
@@ -258,7 +258,7 @@ async function fireSetOcrData(barcode, ingredients) {
       createdAt: now
     });
     console.log('[OCR] Saving to Firebase:', barcode);
-    const response = await fetch(await docPath('products_ocr', barcode), {
+    const response = await fetch(docPath('products_ocr', barcode), {
       method: 'PATCH',
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({
