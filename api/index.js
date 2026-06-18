@@ -772,7 +772,7 @@ app.get('/api/product/:barcode', async (req, res) => {
       sourceResults[sourceResults.length - 1] = { source: "Groq (IA)", found: true, productName: groqId.name, brandName: groqId.brand, allergenInfo: "Consultando USDA...", nutritionInfo: "Consultando USDA..." };
       const enrichment = await enrichFromUSDA(groqId.name, groqId.brand);
       if (enrichment) {
-        const gp = {
+        let gp = {
           name: groqId.name, brand: groqId.brand, image: "", isFood: true,
           category: "Comida / Bebida (Identificado por IA)",
           gluten: enrichment.gluten, calories: enrichment.calories,
@@ -783,13 +783,20 @@ app.get('/api/product/:barcode', async (req, res) => {
         if (enrichment.saturatedFat != null) gp.nutriments['saturated-fat_100g'] = enrichment.saturatedFat;
         if (enrichment.sodium != null) gp.nutriments['sodium_100g'] = Math.round(enrichment.sodium) / 1000;
 
-        // Add OCR data if available
         gp = await addOcrDataIfAvailable(gp);
 
         const respData = { status: 1, source: 'local', sourceLabel: 'Groq + USDA', product: gp, sourceResults };
         await setCacheEntry(barcode, respData, "Groq+USDA", null);
         return res.json(respData);
       }
+    }
+
+    // OCR-only fallback: product not found anywhere but user submitted OCR data
+    const ocrOnlyBase = { name: "Producto", brand: "Desconocida", image: "", isFood: true, category: "Alimento", allergens: [], nutriscore: "-", isFromFallback: true, calories: { value: 0, level: "No Especificado", percent: 10 }, gluten: { hasGluten: false, details: "Verificar empaque" }, nutriments: {}, dietary: {} };
+    const ocrOnlyProduct = await addOcrDataIfAvailable(ocrOnlyBase);
+    if (ocrOnlyProduct._from_ocr || ocrOnlyProduct._from_nutrition_ocr) {
+      const respData = { status: 1, source: 'local', sourceLabel: 'OCR', product: ocrOnlyProduct, sourceResults };
+      return res.json(respData);
     }
 
     return res.status(404).json({ status: 0, message: "Producto no encontrado", sourceResults });

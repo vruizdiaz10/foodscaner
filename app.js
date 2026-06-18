@@ -1125,7 +1125,7 @@ function renderProductData(product, barcode) {
     nutritionRequestBtn.onclick = () => showNutritionModal(currentBarcode);
   }
 
-  if (product.isFromFallback && !product._enrichedFrom && !product.ingredientsText) {
+  if (product.isFromFallback && !product._enrichedFrom && !product.ingredientsText && !product._from_nutrition_ocr) {
     // Only show warning if there's no information at all (no ingredients from OFF or OCR, no enrichment)
     noNutritionAlert.classList.remove("hidden");
     renderHypertensionCard(product);
