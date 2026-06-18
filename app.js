@@ -317,6 +317,13 @@ async function analyzeBarcode(barcode) {
       product.ingredientsText = product.ingredients_text;
     }
 
+    // Normalize sugars level if missing (nutrition OCR sets only { value } for local products)
+    if (product.sugars?.value != null && !product.sugars.level) {
+      const s = product.sugars.value;
+      product.sugars.level = s > 22.5 ? "Alto" : s > 5 ? "Medio" : "Bajo";
+      product.sugars.percent = s > 22.5 ? Math.min(100, Math.round(s / 33.75 * 100)) : s > 5 ? Math.round(s / 22.5 * 100) : Math.max(3, Math.round(s / 5 * 50));
+    }
+
     // Preserve cache/verification flags
     product._fromCache = data._fromCache || false;
     product._verified = data._verified || false;
@@ -1945,7 +1952,12 @@ function showOcrModal(barcode) {
 
 function hideOcrModal() {
   const modal = document.getElementById("ocr-modal");
-  if (modal) modal.classList.add("hidden");
+  if (modal) {
+    const step4 = document.getElementById("ocr-step-4");
+    const savedSuccessfully = step4 && !step4.classList.contains("hidden");
+    modal.classList.add("hidden");
+    if (savedSuccessfully && currentBarcode) analyzeBarcode(currentBarcode);
+  }
 }
 
 function initOcrHandlers() {
@@ -2051,11 +2063,7 @@ function initOcrHandlers() {
   }
 
   if (closeBtn) closeBtn.onclick = hideOcrModal;
-  if (finalCloseBtn) finalCloseBtn.onclick = () => {
-    const b = currentBarcode;
-    hideOcrModal();
-    if (b) analyzeBarcode(b);
-  };
+  if (finalCloseBtn) finalCloseBtn.onclick = hideOcrModal;
 
   const overlay = document.querySelector(".modal-overlay");
   if (overlay) overlay.onclick = hideOcrModal;
