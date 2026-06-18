@@ -985,9 +985,9 @@ app.post('/api/ocr/process', async (req, res) => {
     const { imageData } = req.body;
     if (!imageData) return res.status(400).json({ error: 'Missing imageData' });
 
-    const prompt = `Extrae la lista de ingredientes de esta imagen de etiqueta alimentaria.
-Devuelve SOLO los ingredientes separados por comas, en una sola línea, sin explicaciones ni títulos.
-Corrige errores obvios de lectura pero no inventes ingredientes.
+    const prompt = `Extrae el texto de ingredientes de esta imagen de etiqueta alimentaria.
+Devuelve el texto tal como aparece, incluyendo ingredientes y cualquier declaración de alérgenos como "Contiene:", "Puede contener:", "Trazas de:" u otras advertencias similares.
+Corrige errores obvios de lectura pero no inventes texto ni omitas secciones.
 Si no puedes leer los ingredientes, responde con texto vacío.`;
 
     const result = await callGroqVision(imageData, prompt);
