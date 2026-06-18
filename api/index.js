@@ -3,7 +3,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const rateLimit = require('express-rate-limit');
-const { getAccessToken, fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache, fireGetVerifiedProduct, fireGetExtendedCache, fireSetExtendedCache, fireGetOcrData, fireSetOcrData, fireGetNutritionOcr, fireSetNutritionOcr, fireListCollection, fireDeleteDoc } = require('./firestore');
+const { getAccessToken, fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache, fireSetExtendedCache, fireGetOcrData, fireSetOcrData, fireGetNutritionOcr, fireSetNutritionOcr } = require('./firestore');
 
 // Load verified products database
 let verifiedProducts = {};
@@ -709,6 +709,11 @@ app.get('/api/product/:barcode', async (req, res) => {
       if (ocrData?.ingredients_ocr) {
         product.ingredients_text = ocrData.ingredients_ocr;
         product._from_ocr = true;
+        // Gluten detection from OCR ingredients (only set when detected; never downgrade richer OFF data)
+        const gluten = detectGluten(ocrData.ingredients_ocr);
+        if (gluten.hasGluten) {
+          product.gluten = { hasGluten: true, details: "Contiene gluten (detectado en ingredientes)", dataAvailable: true };
+        }
       }
 
       if (nutritionOcr?.nutritionData) {
@@ -726,8 +731,19 @@ app.get('/api/product/:barcode', async (req, res) => {
           if (key && product.nutriments[key] == null) { const n = nutVal(v); if (n != null) product.nutriments[key] = n; }
           if (k === 'sodio' && product.nutriments['sodium_100g'] == null) { const n = nutVal(v); if (n != null) product.nutriments['sodium_100g'] = n / 1000; }
         }
-        // Also set direct fields used by AI for local (non-OFF) products
-        if (product.sugars == null && nd.azucares != null) { const n = nutVal(nd.azucares); if (n != null) product.sugars = { value: n }; }
+        // Build card-shaped fields for UI widgets (calories, proteins, sugars, carbohydrates)
+        const kcal = product.nutriments['energy-kcal_100g'];
+        if (kcal != null && !(product.calories?.value > 0)) {
+          product.calories = { value: kcal, ...computeEnergyLevel(kcal) };
+        }
+        const prot = product.nutriments['proteins_100g'];
+        if (prot != null && product.proteins == null) {
+          product.proteins = { value: prot, level: prot > 10 ? "Alto" : prot > 3 ? "Moderado" : "Bajo", percent: Math.min(100, Math.round(prot / 20 * 100)) };
+        }
+        const sug = product.nutriments['sugars_100g'];
+        if (sug != null && product.sugars == null) {
+          product.sugars = { value: sug, level: sug > 22.5 ? "Alto" : sug > 5 ? "Medio" : "Bajo", percent: sug > 22.5 ? Math.min(100, Math.round(sug / 33.75 * 100)) : sug > 5 ? Math.round(sug / 22.5 * 100) : Math.max(3, Math.round(sug / 5 * 50)) };
+        }
         if (product.carbohydrates == null && nd.carbohidratos != null) {
           const c = nutVal(nd.carbohidratos), f = nutVal(nd.fibra);
           if (c != null) product.carbohydrates = { value: c, fiber: f };
@@ -1083,76 +1099,6 @@ app.delete('/api/ocr/:barcode', async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ error: error.message });
-  }
-});
-
-// List all OCR data in Firebase
-app.get('/api/ocr/list', async (req, res) => {
-  try {
-    const token = await getAccessToken();
-    if (!token) return res.status(401).json({ error: 'No Firebase access' });
-
-    const projectId = 'foodscaner-cache-v2';
-    const resp = await fetch(`https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/products_ocr`, {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-
-    if (!resp.ok) return res.status(resp.status).json({ error: 'Firebase query failed' });
-
-    const data = await resp.json();
-    const ocrs = data.documents?.map(doc => {
-      const barcode = doc.name.split('/').pop();
-      const fields = doc.fields;
-      const ocrData = fields._data?.stringValue ? JSON.parse(fields._data.stringValue) : null;
-      return {
-        barcode,
-        createdAt: ocrData?.createdAt,
-        approved: ocrData?.approved,
-        ingredientsLength: ocrData?.ingredients_ocr?.length || 0,
-        ingredientsPreview: ocrData?.ingredients_ocr?.substring(0, 100) || ''
-      };
-    }) || [];
-
-    res.json({ count: ocrs.length, ocrs });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// List all barcodes with OCR data in Firebase
-app.get('/api/ocr/list', async (req, res) => {
-  try {
-    const [ingredients, nutrition] = await Promise.all([
-      fireListCollection('products_ocr'),
-      fireListCollection('products_nutrition')
-    ]);
-    const nutritionBarcodes = new Set(nutrition.map(n => n.barcode));
-    res.json({
-      ingredients: ingredients.map(e => ({ barcode: e.barcode, hasData: !!e.data?.ingredients_ocr, createdAt: e.data?.createdAt })),
-      nutrition: nutrition.map(e => ({ barcode: e.barcode, hasData: !!e.data?.nutritionData, createdAt: e.data?.createdAt })),
-    });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Delete all OCR data from Firebase (ingredients + nutrition)
-app.delete('/api/ocr-clear-all', async (req, res) => {
-  try {
-    const [ingredients, nutrition] = await Promise.all([
-      fireListCollection('products_ocr'),
-      fireListCollection('products_nutrition')
-    ]);
-    const results = await Promise.all([
-      ...ingredients.map(e => fireDeleteDoc('products_ocr', e.barcode).then(ok => ({ col: 'products_ocr', barcode: e.barcode, ok }))),
-      ...nutrition.map(e => fireDeleteDoc('products_nutrition', e.barcode).then(ok => ({ col: 'products_nutrition', barcode: e.barcode, ok })))
-    ]);
-    // Also clear memory cache for affected barcodes
-    const barcodes = new Set([...ingredients.map(e => e.barcode), ...nutrition.map(e => e.barcode)]);
-    for (const b of barcodes) await removeCacheEntry(b);
-    res.json({ deleted: results.length, results });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
   }
 });
 

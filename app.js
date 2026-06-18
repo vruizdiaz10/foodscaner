@@ -317,13 +317,6 @@ async function analyzeBarcode(barcode) {
       product.ingredientsText = product.ingredients_text;
     }
 
-    // Normalize sugars level if missing (nutrition OCR sets only { value } for local products)
-    if (product.sugars?.value != null && !product.sugars.level) {
-      const s = product.sugars.value;
-      product.sugars.level = s > 22.5 ? "Alto" : s > 5 ? "Medio" : "Bajo";
-      product.sugars.percent = s > 22.5 ? Math.min(100, Math.round(s / 33.75 * 100)) : s > 5 ? Math.round(s / 22.5 * 100) : Math.max(3, Math.round(s / 5 * 50));
-    }
-
     // Preserve cache/verification flags
     product._fromCache = data._fromCache || false;
     product._verified = data._verified || false;
@@ -1479,7 +1472,9 @@ function runAICheck(product, barcode) {
         const reason = (aiItem.razon || '').toLowerCase();
         if (reason.includes('no aplica') || reason.includes('no contiene') || reason.includes('no apto') || reason.includes('no es')) return;
         if (!product.notRecommended.some(n => n.grupo === aiItem.grupo)) {
-          product.notRecommended.push({ icon: "🤖", grupo: aiItem.grupo, razon: aiItem.razon, certain: false });
+          const isGlutenWarning = /gluten|celiac|celiaq/i.test(aiItem.grupo + ' ' + aiItem.razon);
+          const certain = isGlutenWarning && !!product.gluten?.hasGluten;
+          product.notRecommended.push({ icon: "🤖", grupo: aiItem.grupo, razon: aiItem.razon, certain });
         }
       });
       renderNotRecommended(product);

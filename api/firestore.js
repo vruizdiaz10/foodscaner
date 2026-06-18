@@ -315,34 +315,9 @@ async function fireSetOcrData(barcode, ingredients) {
   }
 }
 
-async function fireDeleteDoc(col, id) {
-  try {
-    const token = await getAccessToken();
-    if (!token) return false;
-    const resp = await fetch(docPath(col, id), { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token }, signal: AbortSignal.timeout(5000) });
-    return resp.ok;
-  } catch (e) { return false; }
-}
-
-async function fireListCollection(col) {
-  try {
-    const token = await getAccessToken();
-    if (!token) return [];
-    const url = `${BASE}/projects/${getProjectId()}/databases/(default)/documents/${encodeURIComponent(col)}?pageSize=100`;
-    const resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token }, signal: AbortSignal.timeout(8000) });
-    if (!resp.ok) return [];
-    const data = await resp.json();
-    return (data.documents || []).map(doc => {
-      const id = doc.name.split('/').pop();
-      const raw = doc.fields?._data?.stringValue;
-      return { barcode: id, data: raw ? (() => { try { return JSON.parse(raw); } catch { return null; } })() : null };
-    });
-  } catch (e) { return []; }
-}
-
 module.exports = {
   getAccessToken,
   fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache,
   fireGetVerifiedProduct, fireGetExtendedCache, fireSetExtendedCache, fireGetOcrData, fireSetOcrData,
-  fireGetNutritionOcr, fireSetNutritionOcr, fireListCollection, fireDeleteDoc
+  fireGetNutritionOcr, fireSetNutritionOcr
 };
