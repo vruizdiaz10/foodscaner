@@ -726,8 +726,8 @@ app.get('/api/product/:barcode', async (req, res) => {
         if (!product.nutriments) product.nutriments = {};
         for (const [k, v] of Object.entries(nd)) {
           const key = NUT_MAP[k];
-          if (key && product.nutriments[key] == null) { const n = nutVal(v); if (n != null) product.nutriments[key] = n; }
-          if (k === 'sodio' && product.nutriments['sodium_100g'] == null) { const n = nutVal(v); if (n != null) product.nutriments['sodium_100g'] = n / 1000; }
+          if (key && !(product.nutriments[key] > 0)) { const n = nutVal(v); if (n != null) product.nutriments[key] = n; }
+          if (k === 'sodio' && !(product.nutriments['sodium_100g'] > 0)) { const n = nutVal(v); if (n != null) product.nutriments['sodium_100g'] = n / 1000; }
         }
         // Build card-shaped fields for UI widgets (calories, proteins, sugars, carbohydrates)
         const kcal = product.nutriments['energy-kcal_100g'];
