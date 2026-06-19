@@ -1084,6 +1084,30 @@ app.delete('/api/ocr/:barcode', async (req, res) => {
   }
 });
 
+// Delete nutrition OCR data from Firebase
+app.delete('/api/nutrition/:barcode', async (req, res) => {
+  try {
+    const { barcode } = req.params;
+    const token = await getAccessToken();
+    if (!token) return res.status(401).json({ error: 'No Firebase access' });
+
+    const projectId = 'foodscaner-cache-v2';
+    const resp = await fetch(`https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/products_nutrition/${encodeURIComponent(barcode)}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+
+    if (resp.ok) {
+      await removeCacheEntry(barcode);
+      res.json({ status: 'deleted', barcode });
+    } else {
+      res.status(resp.status).json({ error: 'Failed to delete nutrition OCR' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Debug: Test Firebase access
 app.get('/api/debug/firebase', async (req, res) => {
   try {
