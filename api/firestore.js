@@ -262,6 +262,7 @@ async function fireListDocs(col, pageToken) {
     let id; try { id = decodeURIComponent(raw); } catch { id = raw; }
     let parsed = null;
     try { parsed = JSON.parse(d.fields?._data?.stringValue || 'null'); } catch {}
+    if (parsed && d.fields?._notFound?.booleanValue === true) parsed.notFound = true;
     return { id, data: parsed };
   });
   return { items, nextPageToken: data.nextPageToken || null };
@@ -271,11 +272,23 @@ async function fireListDocs(col, pageToken) {
 // ponytail: scan_logs crece sin límite; añadir limpieza/TTL si llega a molestar.
 async function fireLogScan(entry) {
   const token = await getAccessToken(); if (!token) return;
-  const id = String(1e16 - Date.now()).padStart(16, '0') + '_' + Math.random().toString(36).slice(2, 8);
+  const { _id, ...data } = entry;
+  const id = _id || String(1e16 - Date.now()).padStart(16, '0') + '_' + Math.random().toString(36).slice(2, 8);
   fetch(docPath('scan_logs', id), {
     method: 'PATCH',
     headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fields: { _data: { stringValue: JSON.stringify(entry) } } }),
+    body: JSON.stringify({ fields: { _data: { stringValue: JSON.stringify(data) } } }),
+    signal: AbortSignal.timeout(5000)
+  }).catch(() => {});
+}
+
+async function fireMarkScanNotFound(id) {
+  const token = await getAccessToken(); if (!token) return;
+  // updateMask patches only _notFound without reading the existing doc
+  fetch(docPath('scan_logs', id) + '?updateMask.fieldPaths=_notFound', {
+    method: 'PATCH',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields: { _notFound: { booleanValue: true } } }),
     signal: AbortSignal.timeout(5000)
   }).catch(() => {});
 }
@@ -305,5 +318,5 @@ module.exports = {
   fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache,
   fireGetOcrData, fireSetOcrData,
   fireGetNutritionOcr, fireSetNutritionOcr,
-  fireListDocs, fireDeleteDoc, fireLogScan, fireLogReport, ADMIN_COLLECTIONS
+  fireListDocs, fireDeleteDoc, fireLogScan, fireMarkScanNotFound, fireLogReport, ADMIN_COLLECTIONS
 };

@@ -3,7 +3,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const rateLimit = require('express-rate-limit');
-const { getAccessToken, fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache, fireGetOcrData, fireSetOcrData, fireGetNutritionOcr, fireSetNutritionOcr, fireListDocs, fireDeleteDoc, fireLogScan, fireLogReport, ADMIN_COLLECTIONS } = require('./firestore');
+const { getAccessToken, fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache, fireGetOcrData, fireSetOcrData, fireGetNutritionOcr, fireSetNutritionOcr, fireListDocs, fireDeleteDoc, fireLogScan, fireMarkScanNotFound, fireLogReport, ADMIN_COLLECTIONS } = require('./firestore');
 
 function detectOS(ua = '') {
   ua = ua.toLowerCase();
@@ -289,7 +289,9 @@ app.get('/api/product/:barcode', async (req, res) => {
 
     // Fire-and-forget scan log (no await — never delays the response)
     const _decCity = c => { try { return decodeURIComponent(c || ''); } catch { return c || ''; } };
+    const _scanLogId = String(1e16 - Date.now()).padStart(16, '0') + '_' + Math.random().toString(36).slice(2, 8);
     fireLogScan({
+      _id: _scanLogId,
       ts: Date.now(),
       barcode,
       ip: (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || '',
@@ -851,6 +853,7 @@ app.get('/api/product/:barcode', async (req, res) => {
       return res.json(respData);
     }
 
+    fireMarkScanNotFound(_scanLogId);
     return res.status(404).json({ status: 0, message: "Producto no encontrado", sourceResults });
   } catch (err) {
     res.status(500).json({ status: 0, message: "Error interno del servidor" });

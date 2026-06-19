@@ -120,7 +120,7 @@
       const fecha = d.ts ? new Date(d.ts).toLocaleString('es-MX') : '—';
       const loc = [d.city, d.region, d.country].filter(Boolean).join(', ') || '—';
       const barcodeCell = d.barcode
-        ? `<a href="https://www.yomi.mx/?barcode=${encodeURIComponent(d.barcode)}" target="_blank" rel="noopener" class="barcode-link">${escHtml(d.barcode)}</a>`
+        ? `<a href="https://www.yomi.mx/?barcode=${encodeURIComponent(d.barcode)}" target="_blank" rel="noopener" class="barcode-link">${escHtml(d.barcode)}</a>${d.notFound ? ' <span class="log-not-found">No encontrado</span>' : ''}`
         : '—';
       return `<tr>
         <td class="mono">${escHtml(fecha)}</td>
