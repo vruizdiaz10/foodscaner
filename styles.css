@@ -50,6 +50,13 @@
   /* Legacy aliases for inline styles in HTML */
   --text-muted:     #6B6B6B;
   --text-secondary: #6B6B6B;
+
+  /* Legacy aliases for JS-injected inline styles (progress bars, risk bars) */
+  --accent-primary:      #1A6B3E;
+  --accent-primary-glow: rgba(26,107,62,0.25);
+  --accent-alert:        #C87B0B;
+  --accent-error:        #C8350B;
+  --accent-error-glow:   rgba(200,53,11,0.25);
 }
 
 /* ── Reset ───────────────────────────────────────── */
@@ -745,6 +752,8 @@ body {
   gap: 12px;
   align-items: flex-start;
   transition: var(--transition);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .analysis-card.full-width { grid-column: span 2; }
