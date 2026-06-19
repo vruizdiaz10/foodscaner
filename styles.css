@@ -62,6 +62,8 @@
 /* ── Reset ───────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+html { overflow-x: hidden; }
+
 body {
   font-family: var(--font-body);
   background: var(--paper);
@@ -1510,6 +1512,25 @@ body {
   border-radius: 3px;
   overflow: hidden;
   margin-top: 4px;
+}
+
+/* ── Mobile overrides ────────────────────────────── */
+@media (max-width: 500px) {
+  .app-container { padding: 14px 12px; }
+
+  .glass-card {
+    padding: 16px;
+    box-shadow: none;
+    border-radius: var(--radius-sm);
+  }
+
+  .allergen-icon-grid { grid-template-columns: repeat(3, 1fr); }
+
+  .analysis-grid { grid-template-columns: 1fr; }
+
+  #product-name { font-size: 1.25rem; }
+
+  .sello-octagon { width: 72px; height: 72px; }
 }
 
 /* ── Scan History ────────────────────────────────── */
