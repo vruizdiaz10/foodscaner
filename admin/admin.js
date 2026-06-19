@@ -119,9 +119,12 @@
       const d = item.data || {};
       const fecha = d.ts ? new Date(d.ts).toLocaleString('es-MX') : '—';
       const loc = [d.city, d.region, d.country].filter(Boolean).join(', ') || '—';
+      const barcodeCell = d.barcode
+        ? `<a href="https://www.yomi.mx/?barcode=${encodeURIComponent(d.barcode)}" target="_blank" rel="noopener" class="barcode-link">${escHtml(d.barcode)}</a>`
+        : '—';
       return `<tr>
         <td class="mono">${escHtml(fecha)}</td>
-        <td class="mono">${escHtml(d.barcode || '—')}</td>
+        <td class="mono">${barcodeCell}</td>
         <td class="mono">${escHtml(d.ip || '—')}</td>
         <td>${escHtml(loc)}</td>
         <td>${escHtml(d.os || '—')}</td>

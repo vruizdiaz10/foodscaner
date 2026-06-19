@@ -90,9 +90,9 @@ let isScanning = false;
 
 // Initialize Application
 // ── Scan History (localStorage, max 5) ───────────────
-function saveToHistory(barcode, name, brand) {
+function saveToHistory(barcode, name, brand, image) {
   const history = getHistory().filter(h => h.barcode !== barcode);
-  history.unshift({ barcode, name, brand });
+  history.unshift({ barcode, name, brand, image: image || '' });
   if (history.length > 5) history.length = 5;
   localStorage.setItem("yomi_history", JSON.stringify(history));
   renderHistory();
@@ -112,13 +112,20 @@ function renderHistory() {
   }
   container.innerHTML = history.map(h => `
     <button class="history-item" data-barcode="${h.barcode}">
-      <span class="history-name">${h.name || "Producto"}</span>
-      <span class="history-meta">${h.brand ? h.brand + " · " : ""}${h.barcode}</span>
+      ${h.image ? `<img class="history-thumb" src="${h.image}" alt="" loading="lazy" onerror="this.style.display='none'">` : '<span class="history-thumb history-thumb-empty"></span>'}
+      <span class="history-text">
+        <span class="history-name">${h.name || "Producto"}</span>
+        <span class="history-meta">${h.brand ? h.brand + " · " : ""}${h.barcode}</span>
+      </span>
     </button>
   `).join("");
 }
 
-document.addEventListener("DOMContentLoaded", setupEventListeners);
+document.addEventListener("DOMContentLoaded", () => {
+  setupEventListeners();
+  const bc = new URLSearchParams(location.search).get('barcode');
+  if (bc) analyzeBarcode(bc.trim());
+});
 
 function setupEventListeners() {
   // Toggle camera scanner
@@ -1136,7 +1143,7 @@ function renderProductData(product, barcode) {
 
   currentBarcode = barcode;
   showState(resultSuccess);
-  saveToHistory(barcode, product.name, product.brand);
+  saveToHistory(barcode, product.name, product.brand, product.image);
 
   // Default data availability when not set by parser
   if (product.isFromFallback) {
