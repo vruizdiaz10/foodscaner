@@ -89,6 +89,35 @@ let html5QrCode = null;
 let isScanning = false;
 
 // Initialize Application
+// ── Scan History (localStorage, max 5) ───────────────
+function saveToHistory(barcode, name, brand) {
+  const history = getHistory().filter(h => h.barcode !== barcode);
+  history.unshift({ barcode, name, brand });
+  if (history.length > 5) history.length = 5;
+  localStorage.setItem("yomi_history", JSON.stringify(history));
+  renderHistory();
+}
+
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem("yomi_history")) || []; } catch { return []; }
+}
+
+function renderHistory() {
+  const container = document.getElementById("scan-history-list");
+  if (!container) return;
+  const history = getHistory();
+  if (!history.length) {
+    container.innerHTML = '<p class="history-empty">Sin escaneos recientes</p>';
+    return;
+  }
+  container.innerHTML = history.map(h => `
+    <button class="history-item" data-barcode="${h.barcode}">
+      <span class="history-name">${h.name || "Producto"}</span>
+      <span class="history-meta">${h.brand ? h.brand + " · " : ""}${h.barcode}</span>
+    </button>
+  `).join("");
+}
+
 document.addEventListener("DOMContentLoaded", setupEventListeners);
 
 function setupEventListeners() {
@@ -101,6 +130,14 @@ function setupEventListeners() {
     barcodeInput.value = "";
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
+
+  // History item click (event delegation)
+  document.getElementById("scan-history-list").addEventListener("click", e => {
+    const btn = e.target.closest(".history-item");
+    if (btn) analyzeBarcode(btn.dataset.barcode);
+  });
+
+  renderHistory();
 
   // Camera selection change
   cameraSelect.addEventListener("change", restartCameraWithSelectedDevice);
@@ -1099,6 +1136,7 @@ function renderProductData(product, barcode) {
 
   currentBarcode = barcode;
   showState(resultSuccess);
+  saveToHistory(barcode, product.name, product.brand);
 
   // Default data availability when not set by parser
   if (product.isFromFallback) {

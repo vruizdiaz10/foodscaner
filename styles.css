@@ -1512,6 +1512,50 @@ body {
   margin-top: 4px;
 }
 
+/* ── Scan History ────────────────────────────────── */
+.history-empty {
+  font-size: 0.82rem;
+  color: var(--ink-3);
+  font-style: italic;
+  padding: 4px 0;
+}
+
+.history-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  background: var(--paper);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  cursor: pointer;
+  transition: var(--transition);
+  margin-bottom: 6px;
+}
+
+.history-item:last-child { margin-bottom: 0; }
+.history-item:hover { background: var(--surface); border-color: var(--ink-3); }
+
+.history-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-meta {
+  font-size: 0.72rem;
+  color: var(--ink-3);
+  font-family: var(--font-data);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ── App Footer ──────────────────────────────────── */
 .app-footer {
   text-align: center;
