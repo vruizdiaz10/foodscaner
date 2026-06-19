@@ -139,6 +139,12 @@ body {
   font-weight: 400;
   letter-spacing: 0.01em;
 }
+.app-instruction {
+  color: var(--ink-3);
+  font-size: 0.78rem;
+  margin-top: 6px;
+  line-height: 1.5;
+}
 
 /* ── Main Grid — single column ───────────────────── */
 .app-main-grid {

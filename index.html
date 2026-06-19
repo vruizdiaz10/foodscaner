@@ -56,6 +56,7 @@
         <h1><span class="yo">yo</span><span class="mi">mi</span></h1>
       </div>
       <p class="tagline">¿Puedo comerlo? Escanea y lo sabes en segundos.</p>
+      <p class="app-instruction">Usa la cámara o ingresa el código de barras manualmente para analizar cualquier producto.</p>
     </header>
 
     <main class="app-main-grid">
@@ -123,16 +124,7 @@
       <!-- PANEL DE RESULTADOS (DERECHA) -->
       <section class="results-panel glass-card">
         <!-- ESTADO INICIAL / VACÍO -->
-        <div id="result-empty" class="result-state active">
-          <div class="empty-illustration">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="pulse-slow">
-              <path d="M12 2v20M17 5v14M7 5v14M20 7v10M4 7v10" stroke-linecap="round"/>
-              <path d="M2 12h20" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 4"/>
-            </svg>
-          </div>
-          <h3>Esperando Escaneo</h3>
-          <p>Escanea un código de barras con la cámara o ingrésalo manualmente para analizar el producto.</p>
-        </div>
+        <div id="result-empty" class="result-state active"></div>
 
         <!-- ESTADO CARGANDO -->
         <div id="result-loading" class="result-state">
@@ -672,6 +664,6 @@
   </div>
 
   <!-- App Main Javascript -->
-  <script src="app.js?v=39" defer></script>
+  <script src="app.js?v=40" defer></script>
 </body>
 </html>
