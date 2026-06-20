@@ -18,18 +18,12 @@
   let currentCol = 'scan_logs';
   let nextPageToken = null;
   let allItems = [];
-  let ocrBarcodes = null, nutritionBarcodes = null, reportBarcodes = null;
+  let reportBarcodes = null;
 
   async function loadBarcodeFlags() {
-    if (ocrBarcodes) return; // cached for session
-    const [ro, rn, rr] = await Promise.all([
-      apiFetch('/api/admin/products_ocr'),
-      apiFetch('/api/admin/products_nutrition'),
-      apiFetch('/api/admin/reports')
-    ]);
-    ocrBarcodes       = new Set(ro.ok ? (await ro.json()).items.map(i => i.id) : []);
-    nutritionBarcodes = new Set(rn.ok ? (await rn.json()).items.map(i => i.id) : []);
-    reportBarcodes    = new Set(rr.ok ? (await rr.json()).items.map(i => (i.data||{}).barcode).filter(Boolean) : []);
+    if (reportBarcodes) return; // cached for session
+    const rr = await apiFetch('/api/admin/reports');
+    reportBarcodes = new Set(rr.ok ? (await rr.json()).items.map(i => (i.data||{}).barcode).filter(Boolean) : []);
   }
 
   function apiFetch(path, opts = {}) {
@@ -135,10 +129,10 @@
       const loc = [d.city, d.region, d.country].filter(Boolean).join(', ') || '—';
       const bc = d.barcode || '';
       const badges = [
-        d.notFound                          ? '<span class="log-badge log-badge-red">No encontrado</span>'  : '',
-        ocrBarcodes?.has(bc)               ? '<span class="log-badge log-badge-blue">📷 Ingredientes</span>' : '',
-        nutritionBarcodes?.has(bc)         ? '<span class="log-badge log-badge-blue">📊 Nutrición</span>'   : '',
-        reportBarcodes?.has(bc)            ? '<span class="log-badge log-badge-orange">🚩 Reporte</span>'   : ''
+        d.notFound    ? '<span class="log-badge log-badge-red">No encontrado</span>'      : '',
+        d.hasOcr      ? '<span class="log-badge log-badge-blue">📷 Ingredientes</span>'   : '',
+        d.hasNutritionOcr ? '<span class="log-badge log-badge-blue">📊 Nutrición</span>' : '',
+        reportBarcodes?.has(bc) ? '<span class="log-badge log-badge-orange">🚩 Reporte</span>' : ''
       ].filter(Boolean).join(' ');
       const barcodeCell = bc
         ? `<a href="https://www.yomi.mx/?barcode=${encodeURIComponent(bc)}" target="_blank" rel="noopener" class="barcode-link">${escHtml(bc)}</a> ${badges}`

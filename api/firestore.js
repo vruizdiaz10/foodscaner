@@ -263,6 +263,8 @@ async function fireListDocs(col, pageToken) {
     let parsed = null;
     try { parsed = JSON.parse(d.fields?._data?.stringValue || 'null'); } catch {}
     if (parsed && d.fields?._notFound?.booleanValue === true) parsed.notFound = true;
+    if (parsed && d.fields?._hasOcr?.booleanValue === true) parsed.hasOcr = true;
+    if (parsed && d.fields?._hasNutritionOcr?.booleanValue === true) parsed.hasNutritionOcr = true;
     return { id, data: parsed };
   });
   return { items, nextPageToken: data.nextPageToken || null };
@@ -284,11 +286,30 @@ async function fireLogScan(entry) {
 
 async function fireMarkScanNotFound(id) {
   const token = await getAccessToken(); if (!token) return;
-  // updateMask patches only _notFound without reading the existing doc
   fetch(docPath('scan_logs', id) + '?updateMask.fieldPaths=_notFound', {
     method: 'PATCH',
     headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
     body: JSON.stringify({ fields: { _notFound: { booleanValue: true } } }),
+    signal: AbortSignal.timeout(5000)
+  }).catch(() => {});
+}
+
+async function fireMarkScanHasOcr(id) {
+  const token = await getAccessToken(); if (!token) return;
+  fetch(docPath('scan_logs', id) + '?updateMask.fieldPaths=_hasOcr', {
+    method: 'PATCH',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields: { _hasOcr: { booleanValue: true } } }),
+    signal: AbortSignal.timeout(5000)
+  }).catch(() => {});
+}
+
+async function fireMarkScanHasNutrition(id) {
+  const token = await getAccessToken(); if (!token) return;
+  fetch(docPath('scan_logs', id) + '?updateMask.fieldPaths=_hasNutritionOcr', {
+    method: 'PATCH',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields: { _hasNutritionOcr: { booleanValue: true } } }),
     signal: AbortSignal.timeout(5000)
   }).catch(() => {});
 }
@@ -318,5 +339,5 @@ module.exports = {
   fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache,
   fireGetOcrData, fireSetOcrData,
   fireGetNutritionOcr, fireSetNutritionOcr,
-  fireListDocs, fireDeleteDoc, fireLogScan, fireMarkScanNotFound, fireLogReport, ADMIN_COLLECTIONS
+  fireListDocs, fireDeleteDoc, fireLogScan, fireMarkScanNotFound, fireMarkScanHasOcr, fireMarkScanHasNutrition, fireLogReport, ADMIN_COLLECTIONS
 };

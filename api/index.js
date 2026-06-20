@@ -3,7 +3,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const rateLimit = require('express-rate-limit');
-const { getAccessToken, fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache, fireGetOcrData, fireSetOcrData, fireGetNutritionOcr, fireSetNutritionOcr, fireListDocs, fireDeleteDoc, fireLogScan, fireMarkScanNotFound, fireLogReport, ADMIN_COLLECTIONS } = require('./firestore');
+const { getAccessToken, fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache, fireGetOcrData, fireSetOcrData, fireGetNutritionOcr, fireSetNutritionOcr, fireListDocs, fireDeleteDoc, fireLogScan, fireMarkScanNotFound, fireMarkScanHasOcr, fireMarkScanHasNutrition, fireLogReport, ADMIN_COLLECTIONS } = require('./firestore');
 
 function detectOS(ua = '') {
   ua = ua.toLowerCase();
@@ -290,6 +290,7 @@ app.get('/api/product/:barcode', async (req, res) => {
     // Fire-and-forget scan log (no await — never delays the response)
     const _decCity = c => { try { return decodeURIComponent(c || ''); } catch { return c || ''; } };
     const _scanLogId = String(1e16 - Date.now()).padStart(16, '0') + '_' + Math.random().toString(36).slice(2, 8);
+    res.setHeader('X-Scan-Log-Id', _scanLogId);
     fireLogScan({
       _id: _scanLogId,
       ts: Date.now(),
@@ -998,10 +999,11 @@ app.post('/api/cache/refresh/:barcode', async (req, res) => {
 // Save captured nutrition data to Firebase
 app.post('/api/products/nutrition', async (req, res) => {
   try {
-    const { barcode, nutritionData } = req.body;
+    const { barcode, nutritionData, scanLogId } = req.body;
     if (!barcode || !nutritionData) return res.status(400).json({ error: 'Missing barcode or nutritionData' });
     await removeCacheEntry(barcode);
     await fireSetNutritionOcr(barcode, nutritionData);
+    if (scanLogId) fireMarkScanHasNutrition(scanLogId);
     res.json({ status: 'ok', barcode });
   } catch (error) {
     res.status(500).json({ error: 'Error al guardar nutrición: ' + error.message });
@@ -1156,7 +1158,7 @@ app.get('/api/debug/firebase', async (req, res) => {
 // Save processed ingredients to Firebase
 app.post('/api/products/ocr', async (req, res) => {
   try {
-    const { barcode, ingredients } = req.body;
+    const { barcode, ingredients, scanLogId } = req.body;
     console.log('[OCR Save] Received:', { barcode, ingredientsLength: ingredients?.length });
 
     if (!barcode || !ingredients) {
@@ -1165,11 +1167,11 @@ app.post('/api/products/ocr', async (req, res) => {
     }
 
     console.log('[OCR Save] Clearing cache for', barcode);
-    // Clear cache so next scan fetches fresh with OCR data
     await removeCacheEntry(barcode);
 
     console.log('[OCR Save] Calling fireSetOcrData...');
     await fireSetOcrData(barcode, ingredients);
+    if (scanLogId) fireMarkScanHasOcr(scanLogId);
 
     console.log('[OCR Save] Success');
     res.json({

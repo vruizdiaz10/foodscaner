@@ -10,6 +10,7 @@ function esc(s) {
 
 // Global state
 let currentBarcode = null;
+let currentScanLogId = null;
 
 // DOM Elements
 const btnToggleCamera = document.getElementById("btn-toggle-camera");
@@ -368,6 +369,7 @@ async function analyzeBarcode(barcode) {
       return;
     }
 
+    currentScanLogId = response.headers.get('x-scan-log-id') || null;
     currentDataSources = data.sourceLabel || "Desconocido";
     currentSourceResults = data.sourceResults || [];
 
@@ -2167,7 +2169,7 @@ function initOcrHandlers() {
         const response = await fetch("/api/products/ocr", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ barcode: currentBarcode, ingredients })
+          body: JSON.stringify({ barcode: currentBarcode, ingredients, scanLogId: currentScanLogId })
         });
 
         if (!response.ok) throw new Error(`Error ${response.status}`);
@@ -2307,7 +2309,7 @@ function initNutritionHandlers() {
       const response = await fetch("/api/products/nutrition", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ barcode: currentBarcode, nutritionData })
+        body: JSON.stringify({ barcode: currentBarcode, nutritionData, scanLogId: currentScanLogId })
       });
       if (!response.ok) throw new Error(`Error ${response.status}`);
       document.getElementById("nutrition-step-3").classList.add("hidden");
