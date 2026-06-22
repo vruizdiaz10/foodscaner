@@ -160,7 +160,8 @@ function setupEventListeners() {
   if (navScanReset) navScanReset.addEventListener("click", resetToScan);
 
   // History item click (event delegation)
-  document.getElementById("scan-history-list").addEventListener("click", e => {
+  const historyList = document.getElementById("scan-history-list");
+  if (historyList) historyList.addEventListener("click", e => {
     const btn = e.target.closest(".history-item");
     if (btn) analyzeBarcode(btn.dataset.barcode);
   });
