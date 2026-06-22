@@ -49,6 +49,7 @@
   /* ── Layout ───────────────────────────────────────── */
   --radius:        4px;
   --radius-sm:     4px;
+  --radius-lg:     12px;
   --radius-pill:   9999px;
   --shadow-card:   0 1px 3px rgba(45,188,158,0.07);
   --shadow-hover:  0 4px 12px rgba(45,188,158,0.15);
@@ -550,52 +551,36 @@ body {
 
 .product-header {
   display: flex;
-  gap: 16px;
+  flex-direction: column;
+  gap: 12px;
   width: 100%;
-  border-bottom: 1.5px solid var(--border);
-  padding-bottom: 18px;
-  /* Signature element: left accent bar */
-  border-left: 4px solid var(--green);
-  padding-left: 16px;
 }
 
-@media (max-width: 500px) {
-  .product-header {
-    flex-direction: column;
-    align-items: flex-start;
-    text-align: left;
-    border-left: 4px solid var(--green);
-    padding-left: 14px;
-  }
-}
-
-.product-image-container {
-  width: 88px;
-  height: 88px;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.product-image-container img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-}
-
-.product-info {
+.product-meta {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 3px;
-  flex-grow: 1;
-  min-width: 0;
+  gap: 2px;
+  padding: 0 4px;
 }
+
+.product-hero {
+  width: 100%;
+  height: 180px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.product-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* keep legacy selectors working if referenced from JS */
+.product-image-container { display: none; }
+.product-info { display: contents; }
 
 /* Badges */
 .badge {
@@ -628,9 +613,9 @@ body {
 /* ── Product name & info ─────────────────────────── */
 #product-name {
   font-family: var(--font-display);
-  font-size: 1.55rem;
-  font-weight: 400;
-  line-height: 1.2;
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.25;
   color: var(--ink);
   word-break: break-word;
 }
@@ -738,7 +723,7 @@ body {
 .analysis-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
 }
 
@@ -749,25 +734,19 @@ body {
 /* ── Analysis Cards ──────────────────────────────── */
 .analysis-card {
   background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 18px 16px;
   display: flex;
   gap: 12px;
   align-items: flex-start;
-  transition: var(--transition);
   width: 100%;
   box-sizing: border-box;
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 2px 8px rgba(13,61,53,0.07);
 }
 
 .analysis-card.full-width { grid-column: span 2; }
 @media (max-width: 550px) { .analysis-card.full-width { grid-column: span 1; } }
-
-.analysis-card:hover {
-  border-color: rgba(45,188,158,0.4);
-  box-shadow: var(--shadow-hover);
-}
 
 .card-icon-wrapper {
   background: var(--surface);
@@ -1083,7 +1062,7 @@ body {
 .nutrition-table tbody tr { border-bottom: 1px solid var(--surface-2); }
 .nutrition-table tbody tr:last-child { border-bottom: none; }
 .nutrition-table td { padding: 7px 16px; color: var(--ink-2); }
-.nutrition-table td:first-child { font-weight: 500; color: var(--ink-3); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.nutrition-table td:first-child { font-weight: 500; color: var(--ink); font-size: 0.84rem; }
 .nutrition-table td:last-child { text-align: right; font-weight: 700; color: var(--ink); font-family: var(--font-data); font-variant-numeric: tabular-nums; }
 
 /* ── Not Recommended ─────────────────────────────── */
@@ -1166,9 +1145,9 @@ body {
   padding: 0 !important;
   overflow: hidden;
   background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-card);
+  border: none;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 2px 8px rgba(13,61,53,0.07);
 }
 
 .ingredients-details { width: 100%; padding: 0; border: none; background: transparent; overflow: hidden; }
@@ -1737,6 +1716,33 @@ body {
   width: 48px;
   height: 48px;
   display: block;
+}
+
+/* ── Yomi+ promo card (result screen) ───────────── */
+.yomi-plus-card {
+  background: var(--ink);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.yomi-plus-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1.4;
+}
+
+.yomi-plus-sub {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--teal-soft);
+  line-height: 1.5;
+  margin: 0;
 }
 
 /* ── Utility ─────────────────────────────────────── */
