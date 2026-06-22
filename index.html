@@ -10,12 +10,12 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <!-- Stylesheet -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="styles.css?v=9">
+  <link rel="stylesheet" href="styles.css?v=10">
   <!-- html5-qrcode CDN -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
 </head>
@@ -467,14 +467,14 @@
 
             <div class="analysis-card full-width card-collapsible hidden" id="ocr-request-section">
               <div style="padding: 16px;">
-                <p style="color: #94a3b8; margin: 0 0 12px 0;">No tenemos la lista de ingredientes de este producto. ¿Puedes ayudarnos?</p>
+                <p style="color: var(--text-muted); margin: 0 0 12px 0;">No tenemos la lista de ingredientes de este producto. ¿Puedes ayudarnos?</p>
                 <button id="btn-ocr-ingredients" class="btn-primary" style="width: 100%;">📸 Subir foto de ingredientes</button>
               </div>
             </div>
 
             <div class="analysis-card full-width card-collapsible hidden" id="nutrition-capture-section">
               <div style="padding: 16px;">
-                <p style="color: #94a3b8; margin: 0 0 12px 0;">No tenemos información nutricional de este producto. ¿Puedes capturar la etiqueta?</p>
+                <p style="color: var(--text-muted); margin: 0 0 12px 0;">No tenemos información nutricional de este producto. ¿Puedes capturar la etiqueta?</p>
                 <button id="btn-nutrition-capture" class="btn-primary" style="width: 100%;">📊 Capturar Información Nutricional</button>
               </div>
             </div>
@@ -544,10 +544,29 @@
       </section>
     </main>
 
-    <footer class="app-footer">
-      <p>&copy; 2026 Yomi. Desarrollado con tecnolog&iacute;a de Wadil AI Studio.</p>
-    </footer>
   </div>
+
+  <!-- Bottom Navigation Bar (Figma design) -->
+  <nav class="bottom-nav">
+    <a href="home.html" class="nav-item" aria-label="Inicio">
+      <img src="assets/redesign/icon-home.svg" alt="" class="nav-icon">
+      <span class="nav-label">Inicio</span>
+    </a>
+    <button class="nav-item active" aria-label="Escanear">
+      <div class="nav-scan-ring">
+        <img src="assets/redesign/icon-scan.svg" alt="" class="nav-scan-icon">
+      </div>
+      <span class="nav-label">Escanear</span>
+    </button>
+    <button class="nav-item" aria-label="Análisis">
+      <img src="assets/redesign/icon-analysis.svg" alt="" class="nav-icon">
+      <span class="nav-label">Análisis</span>
+    </button>
+    <button class="nav-item" aria-label="Perfil">
+      <img src="assets/redesign/icon-profile.svg" alt="" class="nav-icon">
+      <span class="nav-label">Perfil</span>
+    </button>
+  </nav>
 
   <!-- Report Error Modal -->
   <div id="report-modal" class="modal hidden">
