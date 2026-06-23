@@ -210,15 +210,15 @@ body {
 
 .product-card-img {
   width: 100%;
-  height: 96px;
-  object-fit: cover;
+  aspect-ratio: 3/4;
+  object-fit: contain;
   display: block;
   background: #d8f5ef;
 }
 
 .product-card-img-placeholder {
   width: 100%;
-  height: 96px;
+  aspect-ratio: 3/4;
   background: #d8f5ef;
   display: flex;
   align-items: center;
