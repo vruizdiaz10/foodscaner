@@ -655,7 +655,7 @@ body {
 
 .product-hero {
   width: 72px;
-  height: 72px;
+  aspect-ratio: 3/4;
   flex-shrink: 0;
   border-radius: var(--radius);
   overflow: hidden;
@@ -665,7 +665,7 @@ body {
 .product-hero img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
 }
 
