@@ -494,19 +494,25 @@ function renderDietaryBadges(product) {
     return 'unknown';
   }
 
-  // Diet items metadata
+  // Diet items metadata — yes/no/noun drive the label text based on state
+  function labelFor(state, item) {
+    if (state === 'db-yes' || state === 'ai-yes') return (state === 'ai-yes' ? 'Posible ' : '') + item.yes;
+    if (state === 'db-no'  || state === 'ai-no')  return (state === 'ai-no'  ? 'Posible ' : '') + item.no;
+    return item.noun;
+  }
+
   const items = [
-    { emoji: "🌾", label: "Sin Gluten",  state: glutenState,  detail: glutenDetail },
-    { emoji: "🥛", label: "Sin Caseína", state: stateFor(d.caseinFree, d.caseinFreeSource),   detail: buildDetailText(stateFor(d.caseinFree, d.caseinFreeSource), "libre de caseína", d.caseinFreeDetail || "") },
-    { emoji: "🌿", label: "Orgánico",    state: stateFor(d.organic, d.organicSource),          detail: buildDetailText(stateFor(d.organic, d.organicSource), "orgánico", d.organicDetail || "") },
-    { emoji: "🥦", label: "Vegetariano", state: stateFor(d.vegetarian, d.vegetarianSource),    detail: buildDetailText(stateFor(d.vegetarian, d.vegetarianSource), "vegetariano", d.vegetarianDetail || "") },
-    { emoji: "🌱", label: "Vegano",      state: stateFor(d.vegan, d.veganSource),              detail: buildDetailText(stateFor(d.vegan, d.veganSource), "vegano", d.veganDetail || "") },
-    { emoji: "✡️", label: "Kosher",      state: stateFor(d.kosher, d.kosherSource),            detail: buildDetailText(stateFor(d.kosher, d.kosherSource), "kosher", d.kosherDetail || "") },
-    { emoji: "🌙", label: "Halal",       state: stateFor(d.halal, d.halalSource),              detail: buildDetailText(stateFor(d.halal, d.halalSource), "halal", d.halalDetail || "") },
-    { emoji: "🧬", label: "Sin OGM",     state: stateFor(d.nonGmo, d.nonGmoSource),            detail: buildDetailText(stateFor(d.nonGmo, d.nonGmoSource), "libre de OGM", d.nonGmoDetail || "") },
-    { emoji: "🧪", label: "Sin Aditivos",state: stateFor(d.noAdditives, d.noAdditivesSource),  detail: buildDetailText(stateFor(d.noAdditives, d.noAdditivesSource), "libre de aditivos", d.noAdditivesDetail || "") },
-    { emoji: "🌴", label: "Sin Palma",   state: stateFor(d.palmOilFree, d.palmOilFreeSource),  detail: buildDetailText(stateFor(d.palmOilFree, d.palmOilFreeSource), "libre de aceite de palma", d.palmOilFreeDetail || "") },
-    { emoji: "🤝", label: "C. Justo",    state: stateFor(d.fairTrade, d.fairTradeSource),      detail: buildDetailText(stateFor(d.fairTrade, d.fairTradeSource), "de comercio justo", d.fairTradeDetail || "") },
+    { emoji: "🌾", yes: "Sin gluten",    no: "Con gluten",       noun: "Gluten",       state: glutenState,  detail: glutenDetail },
+    { emoji: "🥛", yes: "Sin caseína",   no: "Con caseína",      noun: "Caseína",      state: stateFor(d.caseinFree, d.caseinFreeSource),   detail: buildDetailText(stateFor(d.caseinFree, d.caseinFreeSource), "libre de caseína", d.caseinFreeDetail || "") },
+    { emoji: "🌿", yes: "Orgánico",      no: "No orgánico",      noun: "Orgánico",     state: stateFor(d.organic, d.organicSource),          detail: buildDetailText(stateFor(d.organic, d.organicSource), "orgánico", d.organicDetail || "") },
+    { emoji: "🥦", yes: "Vegetariano",   no: "No vegetariano",   noun: "Vegetariano",  state: stateFor(d.vegetarian, d.vegetarianSource),    detail: buildDetailText(stateFor(d.vegetarian, d.vegetarianSource), "vegetariano", d.vegetarianDetail || "") },
+    { emoji: "🌱", yes: "Vegano",        no: "No vegano",        noun: "Vegano",       state: stateFor(d.vegan, d.veganSource),              detail: buildDetailText(stateFor(d.vegan, d.veganSource), "vegano", d.veganDetail || "") },
+    { emoji: "✡️", yes: "Kosher",        no: "No kosher",        noun: "Kosher",       state: stateFor(d.kosher, d.kosherSource),            detail: buildDetailText(stateFor(d.kosher, d.kosherSource), "kosher", d.kosherDetail || "") },
+    { emoji: "🌙", yes: "Halal",         no: "No halal",         noun: "Halal",        state: stateFor(d.halal, d.halalSource),              detail: buildDetailText(stateFor(d.halal, d.halalSource), "halal", d.halalDetail || "") },
+    { emoji: "🧬", yes: "Sin OGM",       no: "Con OGM",          noun: "OGM",          state: stateFor(d.nonGmo, d.nonGmoSource),            detail: buildDetailText(stateFor(d.nonGmo, d.nonGmoSource), "libre de OGM", d.nonGmoDetail || "") },
+    { emoji: "🧪", yes: "Sin aditivos",  no: "Con aditivos",     noun: "Aditivos",     state: stateFor(d.noAdditives, d.noAdditivesSource),  detail: buildDetailText(stateFor(d.noAdditives, d.noAdditivesSource), "libre de aditivos", d.noAdditivesDetail || "") },
+    { emoji: "🌴", yes: "Sin palma",     no: "Con palma",        noun: "Palma",        state: stateFor(d.palmOilFree, d.palmOilFreeSource),  detail: buildDetailText(stateFor(d.palmOilFree, d.palmOilFreeSource), "libre de aceite de palma", d.palmOilFreeDetail || "") },
+    { emoji: "🤝", yes: "C. justo",      no: "No c. justo",      noun: "C. justo",     state: stateFor(d.fairTrade, d.fairTradeSource),      detail: buildDetailText(stateFor(d.fairTrade, d.fairTradeSource), "de comercio justo", d.fairTradeDetail || "") },
   ];
 
   // Build grid
@@ -516,7 +522,7 @@ function renderDietaryBadges(product) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "dietary-grid-item " + item.state;
-    btn.innerHTML = `<span class="emoji">${item.emoji}</span><span class="label">${item.label}</span>`;
+    btn.innerHTML = `<span class="emoji">${item.emoji}</span><span class="label">${labelFor(item.state, item)}</span>`;
     if (item.state === 'ai-yes' || item.state === 'ai-no') {
       const badge = document.createElement("span");
       badge.className = "ai-badge";
