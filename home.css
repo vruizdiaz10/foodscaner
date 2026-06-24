@@ -31,7 +31,7 @@ body {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 448px;
+  max-width: 680px;
   height: 100dvh;
   background: var(--bg);
   position: relative;
@@ -179,6 +179,10 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   padding: 0 20px 20px;
+}
+
+@media (min-width: 520px) {
+  .products-grid { grid-template-columns: 1fr 1fr 1fr; }
 }
 
 .products-empty {
