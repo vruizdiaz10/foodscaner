@@ -1883,6 +1883,9 @@ body {
   cursor: not-allowed;
 }
 
+/* ── Utility ─────────────────────────────────────── */
+.hidden { display: none !important; }
+
 /* ── Desktop split panel (≥ 768px) ──────────────── */
 @media (min-width: 768px) {
   .app-container {
@@ -1916,6 +1919,3 @@ body {
   }
   .bottom-nav { max-width: 1100px; }
 }
-
-/* ── Utility ─────────────────────────────────────── */
-.hidden { display: none !important; }
