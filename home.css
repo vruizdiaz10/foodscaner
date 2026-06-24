@@ -31,7 +31,7 @@ body {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 680px;
+  max-width: 540px;
   height: 100dvh;
   background: var(--bg);
   position: relative;
@@ -183,6 +183,11 @@ body {
 
 @media (min-width: 520px) {
   .products-grid { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+@media (min-width: 768px) {
+  .app-shell { max-width: 1100px; }
+  .products-grid { grid-template-columns: 1fr 1fr 1fr 1fr; }
 }
 
 .products-empty {
