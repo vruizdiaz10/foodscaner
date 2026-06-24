@@ -99,7 +99,7 @@ body {
 .app-container {
   width: 100%;
   max-width: 680px;
-  overflow-x: clip;
+  overflow-x: hidden;
   padding: 0 0 max(80px, calc(62px + env(safe-area-inset-bottom)));
   min-height: 100dvh;
   display: flex;
@@ -1206,7 +1206,7 @@ body {
 }
 
 .not-rec-icon  { font-size: 0.95rem; line-height: 1; }
-.not-rec-grupo { font-weight: 600; white-space: nowrap; }
+.not-rec-grupo { font-weight: 600; }
 .not-rec-razon { color: var(--ink-3); font-size: 0.72rem; }
 .not-rec-none  { color: var(--ink-3); font-size: 0.84rem; font-style: italic; padding: 4px 0; }
 
@@ -1287,6 +1287,8 @@ body {
   font-size: 0.84rem;
   color: var(--ink-2);
   line-height: 1.65;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .carbs-net-text { font-size: 0.72rem; color: var(--ink-3); margin: 1px 0 0; }
