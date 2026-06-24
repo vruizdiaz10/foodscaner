@@ -3,7 +3,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const rateLimit = require('express-rate-limit');
-const { getAccessToken, fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache, fireGetOcrData, fireSetOcrData, fireGetNutritionOcr, fireSetNutritionOcr, fireListDocs, fireDeleteDoc, fireLogScan, fireMarkScanNotFound, fireMarkScanHasOcr, fireMarkScanHasNutrition, fireLogReport, ADMIN_COLLECTIONS } = require('./firestore');
+const { getAccessToken, fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache, fireGetOcrData, fireSetOcrData, fireGetNutritionOcr, fireSetNutritionOcr, fireListDocs, fireDeleteDoc, fireLogScan, fireMarkScanNotFound, fireMarkScanHasOcr, fireMarkScanHasNutrition, fireMarkScanConfidence, fireLogReport, ADMIN_COLLECTIONS } = require('./firestore');
 
 function detectOS(ua = '') {
   ua = ua.toLowerCase();
@@ -862,7 +862,7 @@ app.get('/api/product/:barcode', async (req, res) => {
 });
 
 app.post('/api/ai-query', async (req, res) => {
-  const { name, brand, ingredients, allergens, sugars, carbohydrates, fiber, isBeverage, dietary } = req.body;
+  const { name, brand, ingredients, allergens, sugars, carbohydrates, fiber, isBeverage, dietary, scanLogId } = req.body;
   if (!name) return res.status(400).json({ error: "Nombre del producto requerido" });
 
   // AI cache: misma consulta repetida dentro de 24h devuelve resultado previo
@@ -967,6 +967,7 @@ REGLAS:
     // y provoca aborts ("signal is aborted without reason").
     res.json(parsed);
     setAiCacheEntry(cacheKey, parsed);
+    if (scanLogId && parsed.confidence) fireMarkScanConfidence(scanLogId, parsed.confidence);
   } catch (err) {
     res.json({ error: "Error inesperado en análisis IA. Los datos del producto ya están visibles." });
   }

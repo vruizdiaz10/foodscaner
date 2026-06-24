@@ -403,8 +403,8 @@ async function analyzeBarcode(barcode) {
     product._verified = data._verified || false;
 
     renderProductData(product, barcode);
-    renderConfidenceWidget();
     renderCacheStatus(product, barcode);
+    showReportCardIfNeeded();
   } catch (error) {
     renderNotFound();
   }
@@ -1481,8 +1481,6 @@ let _lastAiProductKey = "";
 function runAICheck(product, barcode) {
   showDBDisclaimer(product);
   const hasOcr = product._from_ocr || product._from_nutrition_ocr;
-  const confOcrEl = document.getElementById("confidence-ocr");
-  if (confOcrEl) confOcrEl.classList.toggle("hidden", !hasOcr);
   const discOcrEl = document.getElementById("disclaimer-ocr");
   if (discOcrEl) discOcrEl.classList.toggle("hidden", !hasOcr);
 
@@ -1525,7 +1523,8 @@ function runAICheck(product, barcode) {
         carbohydrates: product.carbohydrates?.value ?? null,
         fiber: product.carbohydrates?.fiber ?? null,
         isBeverage: product.isBeverage ?? null,
-        dietary: product.dietary ?? null
+        dietary: product.dietary ?? null,
+        scanLogId: currentScanLogId || null
       }),
       signal: controller.signal
     }).then(r => { clearTimeout(id); return r.json(); });
@@ -1660,32 +1659,7 @@ function runAICheck(product, barcode) {
       }
     }
 
-    // Confidence widget
-    const confidenceEl = document.getElementById("confidence-ai");
-    const aiLevelEl = document.getElementById("confidence-ai-level");
-    if (data.confidence && confidenceEl && aiLevelEl) {
-      let level = (data.confidence || "").toLowerCase();
-      if (!product.ingredientsText) { level = "baja"; }
-      const emojis = { alta: "🟢", media: "🟡", baja: "🔴" };
-      const labels = { alta: "Alta", media: "Media", baja: "Baja" };
-      aiLevelEl.innerHTML = `${emojis[level] || "⚪"} ${esc(labels[level] || data.confidence || "N/A")}`;
-      aiLevelEl.className = "confidence-ai-level confidence-ai-" + (level === "alta" ? "alta" : level === "media" ? "media" : "baja");
-      confidenceEl.classList.remove("hidden");
-    }
-    const notesEl = document.getElementById("confidence-notes");
-    const notesTextEl = document.getElementById("confidence-notes-text");
-    if (notesEl && notesTextEl) {
-      notesTextEl.textContent = !product.ingredientsText
-        ? "No se proporcionó lista de ingredientes. El análisis se basa únicamente en el nombre y la marca del producto, por lo que los resultados pueden ser inexactos."
-        : (data.notes || "");
-      notesEl.classList.remove("hidden");
-    }
-    const modelEl = document.getElementById("confidence-model");
-    const modelTextEl = document.getElementById("confidence-model-text");
-    if (modelEl && modelTextEl && data._model) {
-      modelTextEl.textContent = data._model;
-      modelEl.classList.remove("hidden");
-    }
+
 
     loadingEl.classList.add("hidden");
     errorEl.classList.add("hidden");
@@ -1896,30 +1870,7 @@ function renderWeightCard(product) {
   showHealthRisks();
 }
 
-function renderConfidenceWidget() {
-  const card = document.getElementById("card-confidence");
-  const sourcesEl = document.getElementById("confidence-sources");
-  if (!card || !sourcesEl) return;
-
-  // Fuentes consultadas
-  sourcesEl.innerHTML = "";
-  if (currentSourceResults.length > 0) {
-    currentSourceResults.forEach(sr => {
-      const tag = document.createElement("span");
-      tag.className = "confidence-source-item confidence-source-" + (sr.found ? "found" : "miss");
-      tag.innerHTML = `${sr.found ? "✅" : "❌"} ${sr.source}`;
-      tag.title = sr.found ? `${sr.productName} — ${sr.brandName}` : "No encontrado";
-      sourcesEl.appendChild(tag);
-    });
-  } else if (currentDataSources) {
-    const tag = document.createElement("span");
-    tag.className = "confidence-source-item confidence-source-found";
-    tag.textContent = currentDataSources;
-    sourcesEl.appendChild(tag);
-  }
-  card.classList.remove("hidden");
-
-  // Show report card alongside confidence card
+function showReportCardIfNeeded() {
   const reportCard = document.getElementById("card-report");
   if (reportCard) {
     reportCard.classList.remove("hidden");

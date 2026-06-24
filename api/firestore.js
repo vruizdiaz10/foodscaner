@@ -265,6 +265,7 @@ async function fireListDocs(col, pageToken) {
     if (parsed && d.fields?._notFound?.booleanValue === true) parsed.notFound = true;
     if (parsed && d.fields?._hasOcr?.booleanValue === true) parsed.hasOcr = true;
     if (parsed && d.fields?._hasNutritionOcr?.booleanValue === true) parsed.hasNutritionOcr = true;
+    if (parsed && d.fields?._confidence?.stringValue) parsed.confidence = d.fields._confidence.stringValue;
     return { id, data: parsed };
   });
   return { items, nextPageToken: data.nextPageToken || null };
@@ -314,6 +315,16 @@ async function fireMarkScanHasNutrition(id) {
   }).catch(() => {});
 }
 
+async function fireMarkScanConfidence(id, confidence) {
+  const token = await getAccessToken(); if (!token) return;
+  fetch(docPath('scan_logs', id) + '?updateMask.fieldPaths=_confidence', {
+    method: 'PATCH',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields: { _confidence: { stringValue: confidence } } }),
+    signal: AbortSignal.timeout(5000)
+  }).catch(() => {});
+}
+
 // ponytail: inline base64 image; migrar a Storage si los docs crecen > 800 KB promedio.
 async function fireLogReport(entry) {
   const token = await getAccessToken(); if (!token) return false;
@@ -339,5 +350,5 @@ module.exports = {
   fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache,
   fireGetOcrData, fireSetOcrData,
   fireGetNutritionOcr, fireSetNutritionOcr,
-  fireListDocs, fireDeleteDoc, fireLogScan, fireMarkScanNotFound, fireMarkScanHasOcr, fireMarkScanHasNutrition, fireLogReport, ADMIN_COLLECTIONS
+  fireListDocs, fireDeleteDoc, fireLogScan, fireMarkScanNotFound, fireMarkScanHasOcr, fireMarkScanHasNutrition, fireMarkScanConfidence, fireLogReport, ADMIN_COLLECTIONS
 };

@@ -137,17 +137,20 @@
       const barcodeCell = bc
         ? `<a href="https://www.yomi.mx/scan.html?barcode=${encodeURIComponent(bc)}" target="_blank" rel="noopener" class="barcode-link">${escHtml(bc)}</a> ${badges}`
         : '—';
+      const confMap = { alta: '🟢 Alta', media: '🟡 Media', baja: '🔴 Baja' };
+      const confCell = d.confidence ? (confMap[d.confidence.toLowerCase()] || escHtml(d.confidence)) : '—';
       return `<tr>
         <td class="mono">${escHtml(fecha)}</td>
         <td class="mono">${barcodeCell}</td>
         <td class="mono">${escHtml(d.ip || '—')}</td>
         <td>${escHtml(loc)}</td>
         <td>${escHtml(d.os || '—')}</td>
+        <td>${confCell}</td>
         <td><button class="del-log btn-del" data-action="del" data-id="${escHtml(item.id)}">✕</button></td>
       </tr>`;
     }).join('');
     docList.innerHTML = `<table class="log-table">
-      <thead><tr><th>Fecha/Hora</th><th>Código</th><th>IP</th><th>Ubicación</th><th>Sistema</th><th></th></tr></thead>
+      <thead><tr><th>Fecha/Hora</th><th>Código</th><th>IP</th><th>Ubicación</th><th>Sistema</th><th>Confianza</th><th></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
   }
