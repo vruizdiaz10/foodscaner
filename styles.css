@@ -1861,5 +1861,27 @@ body {
   margin: 0;
 }
 
+.yomi-plus-btn-wrap { margin-top: 12px; }
+
+.yomi-plus-btn {
+  background: var(--accent);
+  color: var(--card);
+  border: none;
+  border-radius: var(--radius);
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  cursor: pointer;
+  line-height: 1.5;
+}
+
+.yomi-plus-btn:disabled {
+  background: transparent;
+  border: 1.5px solid rgba(255,255,255,0.25);
+  color: rgba(255,255,255,0.45);
+  cursor: not-allowed;
+}
+
 /* ── Utility ─────────────────────────────────────── */
 .hidden { display: none !important; }
