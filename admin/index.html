@@ -63,6 +63,22 @@
     .log-badge-red    { background: var(--chile-light); color: var(--chile); border-color: var(--chile-border); }
     .log-badge-blue   { background: #e8f0fe; color: #1a56c4; border-color: #a8c0f0; }
     .log-badge-orange { background: #fff3e0; color: #b45309; border-color: #fcd49a; }
+    /* Confidence tooltip */
+    .conf-wrap { position: relative; display: inline-block; cursor: help; }
+    .conf-tooltip {
+      display: none; position: absolute; bottom: calc(100% + 8px); left: 50%;
+      transform: translateX(-50%); background: var(--ink); color: #fff;
+      border-radius: 6px; padding: 10px 14px; width: 260px; font-size: 0.78rem;
+      line-height: 1.5; z-index: 20; white-space: normal; pointer-events: none;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    }
+    .conf-tooltip::after {
+      content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+      border: 6px solid transparent; border-top-color: var(--ink);
+    }
+    .conf-wrap:hover .conf-tooltip { display: block; }
+    .conf-tooltip-level { font-weight: 700; margin-bottom: 4px; }
+    .conf-tooltip-notes { color: rgba(255,255,255,0.75); }
   </style>
 </head>
 <body style="background:var(--paper);min-height:100vh;">

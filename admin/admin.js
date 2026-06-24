@@ -138,7 +138,10 @@
         ? `<a href="https://www.yomi.mx/scan.html?barcode=${encodeURIComponent(bc)}" target="_blank" rel="noopener" class="barcode-link">${escHtml(bc)}</a> ${badges}`
         : '—';
       const confMap = { alta: '🟢 Alta', media: '🟡 Media', baja: '🔴 Baja' };
-      const confCell = d.confidence ? (confMap[d.confidence.toLowerCase()] || escHtml(d.confidence)) : '—';
+      const confLabel = d.confidence ? (confMap[d.confidence.toLowerCase()] || escHtml(d.confidence)) : null;
+      const confCell = confLabel
+        ? `<span class="conf-wrap">${confLabel}<span class="conf-tooltip"><span class="conf-tooltip-level">Confianza del análisis: ${confLabel}</span>${d.confidenceNotes ? `<span class="conf-tooltip-notes">${escHtml(d.confidenceNotes)}</span>` : ''}</span></span>`
+        : '—';
       return `<tr>
         <td class="mono">${escHtml(fecha)}</td>
         <td class="mono">${barcodeCell}</td>

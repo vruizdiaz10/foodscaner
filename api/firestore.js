@@ -266,6 +266,7 @@ async function fireListDocs(col, pageToken) {
     if (parsed && d.fields?._hasOcr?.booleanValue === true) parsed.hasOcr = true;
     if (parsed && d.fields?._hasNutritionOcr?.booleanValue === true) parsed.hasNutritionOcr = true;
     if (parsed && d.fields?._confidence?.stringValue) parsed.confidence = d.fields._confidence.stringValue;
+    if (parsed && d.fields?._confidenceNotes?.stringValue) parsed.confidenceNotes = d.fields._confidenceNotes.stringValue;
     return { id, data: parsed };
   });
   return { items, nextPageToken: data.nextPageToken || null };
@@ -315,12 +316,15 @@ async function fireMarkScanHasNutrition(id) {
   }).catch(() => {});
 }
 
-async function fireMarkScanConfidence(id, confidence) {
+async function fireMarkScanConfidence(id, confidence, notes) {
   const token = await getAccessToken(); if (!token) return;
-  fetch(docPath('scan_logs', id) + '?updateMask.fieldPaths=_confidence', {
+  const fields = { _confidence: { stringValue: confidence } };
+  let mask = '?updateMask.fieldPaths=_confidence';
+  if (notes) { fields._confidenceNotes = { stringValue: notes }; mask += '&updateMask.fieldPaths=_confidenceNotes'; }
+  fetch(docPath('scan_logs', id) + mask, {
     method: 'PATCH',
     headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fields: { _confidence: { stringValue: confidence } } }),
+    body: JSON.stringify({ fields }),
     signal: AbortSignal.timeout(5000)
   }).catch(() => {});
 }

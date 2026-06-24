@@ -882,7 +882,7 @@ app.post('/api/ai-query', async (req, res) => {
   const cached = await getAiCacheEntry(cacheKey);
   if (cached) {
     cached._model = modelLabel;
-    if (scanLogId && cached.confidence) fireMarkScanConfidence(scanLogId, cached.confidence);
+    if (scanLogId && cached.confidence) fireMarkScanConfidence(scanLogId, cached.confidence, cached.notes);
     return res.json(cached);
   }
 
@@ -968,7 +968,7 @@ REGLAS:
     // y provoca aborts ("signal is aborted without reason").
     res.json(parsed);
     setAiCacheEntry(cacheKey, parsed);
-    if (scanLogId && parsed.confidence) fireMarkScanConfidence(scanLogId, parsed.confidence);
+    if (scanLogId && parsed.confidence) fireMarkScanConfidence(scanLogId, parsed.confidence, parsed.notes);
   } catch (err) {
     res.json({ error: "Error inesperado en análisis IA. Los datos del producto ya están visibles." });
   }
