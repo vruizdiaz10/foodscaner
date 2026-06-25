@@ -1967,6 +1967,7 @@ body {
     box-shadow: none;
     padding: 16px 0 16px 24px;
   }
+  #result-success { height: auto; }
   .product-header { display: none; }
   .panel-section:has(#barcode-form) { display: none; }
   #dietary-section { border-top: none; }
