@@ -1960,8 +1960,7 @@ body {
   }
   .results-panel {
     grid-column: 2;
-    display: flex !important;
-    flex-direction: column;
+    display: block !important;
     overflow-y: auto;
     border-radius: 0;
     border: none;
