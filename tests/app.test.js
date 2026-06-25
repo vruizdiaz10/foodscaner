@@ -439,9 +439,18 @@ describe('validateBarcode', () => {
     expect(r.code).toBe('40111223')
   })
   it('expands a valid UPC-E to UPC-A', () => {
+    // '01234531' fails EAN-8 check (computed check digit = 4 ≠ 1) but
+    // expands as a valid UPC-E: mid='123453', last='3' → '012300000451'
+    const r = validateBarcode('01234531')
+    expect(r.valid).toBe(true)
+    expect(r.code).toBe('012300000451')
+  })
+
+  it('returns EAN-8 as-is when 8-digit code starting with 0 passes EAN-8 checksum', () => {
+    // '01234565' is valid EAN-8 (check digit 5 matches); EAN-8 wins over UPC-E
     const r = validateBarcode('01234565')
     expect(r.valid).toBe(true)
-    expect(r.code).toBe('012345000065')
+    expect(r.code).toBe('01234565')
   })
   it('strips spaces and dashes before validating', () => {
     expect(validateBarcode('4006381 333931').valid).toBe(true)

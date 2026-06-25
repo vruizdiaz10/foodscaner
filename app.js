@@ -126,11 +126,11 @@ function validateBarcode(raw) {
   if (!/^\d+$/.test(code)) return { valid: false };
   const n = code.length;
   if (n !== 8 && n !== 12 && n !== 13) return { valid: false };
+  if (eanChecksum(code)) return { valid: true, code };
   if (n === 8 && code[0] === '0') {
     const expanded = expandUpcE(code);
     if (eanChecksum(expanded)) return { valid: true, code: expanded };
   }
-  if (eanChecksum(code)) return { valid: true, code };
   return { valid: false };
 }
 
