@@ -300,6 +300,7 @@ async function toggleCamera() {
       }
 
       // Start scanning using rear camera by default
+      showScanHint();
       startScanning(defaultCam.id);
     } else {
       alert("No se encontraron cámaras en este dispositivo.");
@@ -350,6 +351,7 @@ function restartCameraWithSelectedDevice() {
 }
 
 function resetCameraButton() {
+  hideScanHint();
   isScanning = false;
   scannerView.classList.remove("active");
   cameraSelectWrapper.classList.add("hidden");
@@ -420,6 +422,26 @@ function stopScanningNative() {
   if (video) video.remove();
   const placeholder = scannerView.querySelector('.scanner-placeholder');
   if (placeholder) placeholder.style.display = '';
+}
+
+let scanActivityTimer = null;
+let scanHintEl = null;
+
+function showScanHint() {
+  if (scanHintEl) return;
+  scanHintEl = document.createElement('p');
+  scanHintEl.id = 'scan-coaching';
+  scanHintEl.style.cssText = 'color:rgba(255,255,255,0.6);font-size:0.8rem;text-align:center;margin:8px 0 0;padding:0 16px;line-height:1.4;';
+  scanHintEl.textContent = 'Centra el código y mueve el teléfono despacio de lado a lado';
+  if (scannerWrapper) scannerWrapper.insertBefore(scanHintEl, scannerWrapper.querySelector('.scanner-controls').nextSibling);
+  scanActivityTimer = setTimeout(() => {
+    if (scanHintEl && isScanning) scanHintEl.textContent = 'Buscando código...';
+  }, 3000);
+}
+
+function hideScanHint() {
+  if (scanActivityTimer) { clearTimeout(scanActivityTimer); scanActivityTimer = null; }
+  if (scanHintEl) { scanHintEl.remove(); scanHintEl = null; }
 }
 
 function startScanningFallback(cameraId) {
