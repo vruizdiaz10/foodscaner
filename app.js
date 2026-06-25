@@ -408,6 +408,7 @@ async function startScanningNative(cameraId) {
     nativeScanRafId = requestAnimationFrame(tick);
   } catch (err) {
     console.error('Error al iniciar BarcodeDetector:', err);
+    stopScanningNative();
     resetCameraButton();
   }
 }
