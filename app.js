@@ -401,13 +401,25 @@ async function startScanningNative(cameraId) {
     await video.play();
     await new Promise(r => video.readyState >= 2 ? r() : video.addEventListener('loadeddata', r, { once: true }));
     const detector = new BarcodeDetector({ formats: ['ean_13', 'upc_a', 'upc_e', 'ean_8'] });
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    let detecting = false;
     const tick = () => {
       if (!isScanning) return;
-      detector.detect(video).then(barcodes => {
+      if (detecting || video.readyState < 2 || !video.videoWidth) {
+        nativeScanRafId = requestAnimationFrame(tick);
+        return;
+      }
+      detecting = true;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+      detector.detect(canvas).then(barcodes => {
+        detecting = false;
         if (!isScanning) return;
         if (barcodes.length > 0) onBarcodeDetected(barcodes[0].rawValue);
         else nativeScanRafId = requestAnimationFrame(tick);
-      }).catch(() => { if (isScanning) nativeScanRafId = requestAnimationFrame(tick); });
+      }).catch(() => { detecting = false; if (isScanning) nativeScanRafId = requestAnimationFrame(tick); });
     };
     nativeScanRafId = requestAnimationFrame(tick);
   } catch (err) {
