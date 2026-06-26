@@ -15,7 +15,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="styles.css?v=37">
+  <link rel="stylesheet" href="styles.css?v=38">
   <!-- BarcodeDetector ponyfill: activa ZXing-WASM en iOS y escritorio donde el API nativo no existe -->
   <script type="module">
     import { BarcodeDetector } from "https://esm.sh/barcode-detector@2/pure";
@@ -76,6 +76,14 @@
               <div class="camera-select-container hidden" id="camera-select-wrapper">
                 <label for="camera-select">Cámara:</label>
                 <select id="camera-select" class="styled-select"></select>
+              </div>
+              <button id="btn-torch" type="button" class="btn btn-torch hidden" aria-label="Linterna">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>
+                Linterna
+              </button>
+              <div id="zoom-wrapper" class="zoom-control hidden">
+                <label for="zoom-slider">Zoom</label>
+                <input type="range" id="zoom-slider" class="zoom-slider">
               </div>
             </div>
           </div>
@@ -590,6 +598,6 @@
   </div>
 
   <!-- App Main Javascript -->
-  <script src="app.js?v=53" defer></script>
+  <script src="app.js?v=54" defer></script>
 </body>
 </html>

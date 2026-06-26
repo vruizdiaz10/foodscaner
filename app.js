@@ -36,6 +36,9 @@ const sidebarName = document.getElementById("sidebar-name");
 const sidebarBrand = document.getElementById("sidebar-brand");
 const sidebarBarcode = document.getElementById("sidebar-barcode");
 const scannerWrapper = document.querySelector(".scanner-wrapper");
+const torchBtn   = document.getElementById('btn-torch');
+const zoomWrap   = document.getElementById('zoom-wrapper');
+const zoomSlider = document.getElementById('zoom-slider');
 const caloriesVal = document.getElementById("calories-val");
 const caloriesProgress = document.getElementById("calories-progress");
 const caloriesLevel = document.getElementById("calories-level");
@@ -138,6 +141,7 @@ function validateBarcode(raw) {
 let isScanning = false;
 let nativeScanRafId = null;
 let nativeScanStream = null;
+let torchOn = false;
 
 // Initialize Application
 // ── Scan History (localStorage, max 5) ───────────────
@@ -372,9 +376,12 @@ async function startScanningNative(cameraId) {
   }
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { deviceId: { exact: cameraId }, width: { ideal: 1280 }, height: { ideal: 720 } }
+      video: { deviceId: { exact: cameraId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
     });
     nativeScanStream = stream;
+    const track = stream.getVideoTracks()[0];
+    const caps = track.getCapabilities ? track.getCapabilities() : {};
+    setupScanControls(track, caps);
     const placeholder = scannerView.querySelector('.scanner-placeholder');
     if (placeholder) placeholder.style.display = 'none';
     const video = document.createElement('video');
@@ -395,9 +402,12 @@ async function startScanningNative(cameraId) {
         return;
       }
       detecting = true;
+      const BAND_FRAC = 0.55;
+      const bandH = Math.round(video.videoHeight * BAND_FRAC);
+      const sy = Math.round((video.videoHeight - bandH) / 2);
       canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      ctx.drawImage(video, 0, 0);
+      canvas.height = bandH;
+      ctx.drawImage(video, 0, sy, video.videoWidth, bandH, 0, 0, video.videoWidth, bandH);
       detector.detect(canvas).then(barcodes => {
         detecting = false;
         if (!isScanning) return;
@@ -416,10 +426,38 @@ async function startScanningNative(cameraId) {
 function stopScanningNative() {
   if (nativeScanRafId) { cancelAnimationFrame(nativeScanRafId); nativeScanRafId = null; }
   if (nativeScanStream) { nativeScanStream.getTracks().forEach(t => t.stop()); nativeScanStream = null; }
+  teardownScanControls();
   const video = scannerView.querySelector('video');
   if (video) video.remove();
   const placeholder = scannerView.querySelector('.scanner-placeholder');
   if (placeholder) placeholder.style.display = '';
+}
+
+function setupScanControls(track, caps) {
+  if (caps.torch) {
+    torchBtn.classList.remove('hidden');
+    torchBtn.onclick = async () => {
+      try {
+        await track.applyConstraints({ advanced: [{ torch: !torchOn }] });
+        torchOn = !torchOn;
+        torchBtn.classList.toggle('on', torchOn);
+      } catch (e) { /* equipo rechazó torch */ }
+    };
+  }
+  if (caps.zoom) {
+    zoomWrap.classList.remove('hidden');
+    zoomSlider.min = caps.zoom.min;
+    zoomSlider.max = caps.zoom.max;
+    zoomSlider.step = caps.zoom.step || 0.1;
+    zoomSlider.value = (track.getSettings().zoom) || caps.zoom.min;
+    zoomSlider.oninput = () => track.applyConstraints({ advanced: [{ zoom: Number(zoomSlider.value) }] }).catch(() => {});
+  }
+}
+
+function teardownScanControls() {
+  torchOn = false;
+  torchBtn.classList.add('hidden'); torchBtn.classList.remove('on'); torchBtn.onclick = null;
+  zoomWrap.classList.add('hidden'); zoomSlider.oninput = null;
 }
 
 let scanActivityTimer = null;

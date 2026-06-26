@@ -402,6 +402,11 @@ body {
   box-shadow: none;
 }
 
+.btn-torch.on { background: var(--green); border-color: var(--green); color: #fff; }
+.zoom-control { display: flex; align-items: center; gap: 8px; }
+.zoom-control label { font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+.zoom-slider { flex: 1; accent-color: var(--green); }
+
 .btn-icon { width: 16px; height: 16px; }
 
 /* ── Input label ("O captura el código") ─────────── */
