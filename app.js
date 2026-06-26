@@ -142,10 +142,6 @@ let isScanning = false;
 let nativeScanRafId = null;
 let nativeScanStream = null;
 let torchOn = false;
-// Scanner diagnostic counters
-let scanDebug = null;
-let scanDebugVisible = false;
-
 // Initialize Application
 // ── Scan History (localStorage, max 5) ───────────────
 function saveToHistory(barcode, name, brand, image) {
@@ -237,9 +233,6 @@ function setupEventListeners() {
   // Camera selection change
   cameraSelect.addEventListener("change", restartCameraWithSelectedDevice);
 
-  // Scanner debug toggle
-  document.getElementById('btn-debug')?.addEventListener('click', toggleScanDebug);
-  
   // Manual barcode submission
   barcodeForm.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -402,47 +395,19 @@ function decodeZbar(imageData) {
   }
 }
 
-function toggleScanDebug() {
-  const el = document.getElementById('scanner-debug');
-  if (!el) return;
-  scanDebugVisible = !scanDebugVisible;
-  el.classList.toggle('hidden', !scanDebugVisible);
-}
-
-function updateScanDebug() {
-  if (!scanDebug) return;
-  const $ = id => document.getElementById(id);
-  const f = (id, v) => { const e = $(id); if (e) e.textContent = v; };
-  f('debug-frames', scanDebug.frames);
-  f('debug-decodes', scanDebug.decodes);
-  f('debug-hits', scanDebug.hits);
-  f('debug-errors', scanDebug.errors);
-  f('debug-last-error', scanDebug.lastError || '—');
-  f('debug-native-error', scanDebug.lastNativeError || '—');
-  f('debug-zbar-error', scanDebug.lastZbarError || '—');
-  f('debug-camera', scanDebug.cameraLabel);
-  f('debug-resolution', scanDebug.resolution);
-  f('debug-bd', scanDebug.bdReady ? '✓' : '✗');
-  f('debug-zbar', scanDebug.zbarReady ? '✓' : '✗');
-}
-
 async function startScanningNative(cameraId) {
   if (!('BarcodeDetector' in window) && !(window.zbarWasm && typeof window.zbarWasm.scanImageData === 'function')) {
     alert('El escáner aún no está listo. Ingresa el código manualmente.');
     resetCameraButton();
     return;
   }
-  // Initialize diagnostic counters
-  scanDebug = { frames: 0, decodes: 0, hits: 0, errors: 0, lastError: '', lastNativeError: '', lastZbarError: '', cameraLabel: '', resolution: '', bdReady: !!('BarcodeDetector' in window), zbarReady: !!(window.zbarWasm && typeof window.zbarWasm.scanImageData === 'function') };
   window._zbarFailed = false;
-  document.getElementById('btn-debug')?.classList.remove('hidden');
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { deviceId: { exact: cameraId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
     });
     nativeScanStream = stream;
     const track = stream.getVideoTracks()[0];
-    scanDebug.cameraLabel = track.label || '—';
     const caps = track.getCapabilities ? track.getCapabilities() : {};
     setupScanControls(track, caps);
     const placeholder = scannerView.querySelector('.scanner-placeholder');
@@ -464,8 +429,6 @@ async function startScanningNative(cameraId) {
         nativeScanRafId = requestAnimationFrame(tick);
         return;
       }
-      scanDebug.frames++;
-      scanDebug.resolution = video.videoWidth + 'x' + video.videoHeight;
       detecting = true;
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
@@ -478,23 +441,13 @@ async function startScanningNative(cameraId) {
       Promise.any(decoders)
         .then(code => {
           detecting = false;
-          scanDebug.decodes++;
-          scanDebug.hits++;
-          if (scanDebugVisible) updateScanDebug();
           if (!isScanning) return;
           if (!onBarcodeDetected(code)) nativeScanRafId = requestAnimationFrame(tick);
         })
-        .catch(err => {
+        .catch(() => {
           detecting = false;
-          scanDebug.errors++;
-          const errors = err?.errors || [];
-          scanDebug.lastNativeError = errors[0] || '—';
-          scanDebug.lastZbarError = errors[1] || '—';
-          scanDebug.lastError = (errors[0] !== '—' ? errors[0] : '') + ' | ' + (errors[1] !== '—' ? errors[1] : '');
-          if (scanDebugVisible) updateScanDebug();
           if (isScanning) nativeScanRafId = requestAnimationFrame(tick);
         });
-      if (scanDebugVisible) updateScanDebug();
     };
     nativeScanRafId = requestAnimationFrame(tick);
   } catch (err) {
@@ -512,10 +465,6 @@ function stopScanningNative() {
   if (video) video.remove();
   const placeholder = scannerView.querySelector('.scanner-placeholder');
   if (placeholder) placeholder.style.display = '';
-  // Reset debug
-  scanDebug = null;
-  if (scanDebugVisible) { scanDebugVisible = false; document.getElementById('scanner-debug')?.classList.add('hidden'); }
-  document.getElementById('btn-debug')?.classList.add('hidden');
 }
 
 function setupScanControls(track, caps) {
