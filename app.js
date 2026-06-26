@@ -471,7 +471,11 @@ async function startScanningNative(cameraId) {
       canvas.height = video.videoHeight;
       ctx.drawImage(video, 0, 0);
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      Promise.any([decodeNative(detector, canvas), decodeZbar(imageData)])
+      const decoders = [decodeNative(detector, canvas)];
+      if (!detector && window.zbarWasm && typeof window.zbarWasm.scanImageData === 'function' && !window._zbarFailed) {
+        decoders.push(decodeZbar(imageData));
+      }
+      Promise.any(decoders)
         .then(code => {
           detecting = false;
           scanDebug.decodes++;
