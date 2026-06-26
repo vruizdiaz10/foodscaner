@@ -135,9 +135,7 @@ function validateBarcode(raw) {
 }
 
 // Application Scanner State
-let html5QrCode = null;
 let isScanning = false;
-const USE_NATIVE_SCANNER = 'BarcodeDetector' in window;
 let nativeScanRafId = null;
 let nativeScanStream = null;
 
@@ -251,7 +249,14 @@ function setupEventListeners() {
 
 }
 
-// Camera Scanner Logic using html5-qrcode
+// Camera Scanner Logic
+async function listCameras() {
+  const tmp = await navigator.mediaDevices.getUserMedia({ video: true });
+  const all = await navigator.mediaDevices.enumerateDevices();
+  tmp.getTracks().forEach(t => t.stop());
+  return all.filter(d => d.kind === 'videoinput').map(d => ({ id: d.deviceId, label: d.label }));
+}
+
 async function toggleCamera() {
   if (isScanning) {
     stopScanning();
@@ -269,7 +274,7 @@ async function toggleCamera() {
     btnToggleCamera.style.boxShadow = "0 4px 15px var(--accent-error-glow)";
 
     // Request permissions and get cameras
-    const devices = await Html5Qrcode.getCameras();
+    const devices = await listCameras();
     if (devices && devices.length > 0) {
       // Build camera selection list
       cameraSelect.innerHTML = "";
@@ -295,10 +300,6 @@ async function toggleCamera() {
       cameraSelect.value = defaultCam.id;
 
       isScanning = true;
-      if (!USE_NATIVE_SCANNER) {
-        html5QrCode = new Html5Qrcode("interactive-scanner");
-      }
-
       // Start scanning using rear camera by default
       showScanHint();
       startScanning(defaultCam.id);
@@ -314,40 +315,18 @@ async function toggleCamera() {
 }
 
 function startScanning(cameraId) {
-  if (USE_NATIVE_SCANNER) {
-    startScanningNative(cameraId);
-  } else {
-    startScanningFallback(cameraId);
-  }
+  startScanningNative(cameraId);
 }
 
 function stopScanning() {
-  if (USE_NATIVE_SCANNER) {
-    stopScanningNative();
-    resetCameraButton();
-  } else {
-    if (!html5QrCode) return;
-    html5QrCode.stop().then(() => {
-      html5QrCode = null;
-      resetCameraButton();
-    }).catch(err => {
-      console.error('Error al detener scanner:', err);
-      resetCameraButton();
-    });
-  }
+  stopScanningNative();
+  resetCameraButton();
 }
 
 function restartCameraWithSelectedDevice() {
   if (!isScanning) return;
-  const selectedCameraId = cameraSelect.value;
-  if (USE_NATIVE_SCANNER) {
-    stopScanningNative();
-    startScanningNative(selectedCameraId);
-  } else {
-    if (!html5QrCode) return;
-    html5QrCode.stop().then(() => startScanningFallback(selectedCameraId))
-      .catch(err => { console.error('Error al cambiar cámara:', err); resetCameraButton(); });
-  }
+  stopScanningNative();
+  startScanningNative(cameraSelect.value);
 }
 
 function resetCameraButton() {
@@ -386,6 +365,11 @@ function onBarcodeDetected(rawCode) {
 }
 
 async function startScanningNative(cameraId) {
+  if (!('BarcodeDetector' in window)) {
+    alert('El escáner aún no está listo. Ingresa el código manualmente.');
+    resetCameraButton();
+    return;
+  }
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { deviceId: { exact: cameraId }, width: { ideal: 1280 }, height: { ideal: 720 } }
@@ -456,22 +440,6 @@ function showScanHint() {
 function hideScanHint() {
   if (scanActivityTimer) { clearTimeout(scanActivityTimer); scanActivityTimer = null; }
   if (scanHintEl) { scanHintEl.remove(); scanHintEl = null; }
-}
-
-function startScanningFallback(cameraId) {
-  if (!html5QrCode) return;
-  html5QrCode.start(
-    cameraId,
-    {
-      fps: 20,
-      qrbox: (width, height) => {
-        const minDim = Math.min(width, height);
-        return { width: Math.floor(minDim * 0.85), height: Math.floor(minDim * 0.30) };
-      }
-    },
-    (decodedText) => onBarcodeDetected(decodedText),
-    () => {}
-  ).catch(err => console.error('Error al iniciar scanner:', err));
 }
 
 // Display Result State Panels
