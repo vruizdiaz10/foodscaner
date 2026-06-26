@@ -2018,7 +2018,8 @@ body {
   font-family: monospace;
   font-size: 0.7rem;
   color: #ccc;
-  min-width: 200px;
+  min-width: 280px;
+  max-width: 95vw;
   line-height: 1.5;
   pointer-events: none;
 }
@@ -2031,7 +2032,8 @@ body {
 .debug-value { color: #fff; text-align: right; }
 .debug-error {
   color: #f66;
-  max-width: 140px;
+  max-width: 200px;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
