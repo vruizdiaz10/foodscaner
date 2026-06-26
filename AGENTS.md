@@ -90,8 +90,8 @@ Each returns `{ content, model }`:
 
 ## Git
 - Branch: `master`
-- Last commit: `f1e8346` (PWA: favicon, manifest, service worker)
-- Previous: `5bd314a` (plan file), `fc69457` (scanner traffic-light)
+- Last commit: `9a04e99` (ponytail audit: remove dead code)
+- Previous: `4dadc11` (ponytail plugin), `f1e8346` (PWA), `5bd314a` (plan), `fc69457` (scanner traffic-light)
 
 ## PWA
 - favicon.svg (teal rounded square + barcode + checkmark)
