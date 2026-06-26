@@ -2008,7 +2008,7 @@ body {
   position: absolute;
   bottom: 48px;
   right: 8px;
-  z-index: 10;
+  z-index: 110;
   background: rgba(0,0,0,0.8);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
