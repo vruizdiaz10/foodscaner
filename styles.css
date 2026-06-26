@@ -222,6 +222,36 @@ body {
   box-shadow: 0 0 0 3px var(--green-light);
 }
 
+/* Scanner states — traffic light */
+.scanner-view.scanning {
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 0 3px rgba(245,166,35,0.2);
+  animation: scanPulse 2s ease-in-out infinite;
+}
+.scanner-view.detecting {
+  border: 2px solid var(--green);
+  box-shadow: 0 0 0 4px var(--green-light);
+  animation: flashGreen 0.3s ease-out forwards;
+}
+.scanner-view.failed {
+  border: 2px solid var(--chile);
+  box-shadow: 0 0 0 4px rgba(239,68,68,0.25);
+  animation: flashRed 0.5s ease-out forwards;
+}
+
+@keyframes scanPulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(245,166,35,0.15); }
+  50% { box-shadow: 0 0 0 6px rgba(245,166,35,0.35); }
+}
+@keyframes flashGreen {
+  0% { border-color: var(--green); box-shadow: 0 0 0 5px var(--green-light); }
+  100% { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(245,166,35,0.2); }
+}
+@keyframes flashRed {
+  0% { border-color: var(--chile); box-shadow: 0 0 0 5px rgba(239,68,68,0.3); }
+  100% { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(245,166,35,0.2); }
+}
+
 .scanner-placeholder {
   display: flex;
   flex-direction: column;
@@ -231,11 +261,34 @@ body {
   padding: 24px;
 }
 
-/* corner bracket frame */
+/* corner bracket frame — overlay on video */
 .scan-frame {
-  position: relative;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   width: 62%;
   aspect-ratio: 3/2;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.scanner-view.active .scan-frame { opacity: 1; }
+.scanner-view.scanning .scan-frame::before,
+.scanner-view.scanning .scan-frame::after,
+.scanner-view.scanning .scan-frame span {
+  border-color: rgba(245,166,35,0.75);
+}
+.scanner-view.detecting .scan-frame::before,
+.scanner-view.detecting .scan-frame::after,
+.scanner-view.detecting .scan-frame span {
+  border-color: rgba(22,163,74,0.9);
+}
+.scanner-view.failed .scan-frame::before,
+.scanner-view.failed .scan-frame::after,
+.scanner-view.failed .scan-frame span {
+  border-color: rgba(239,68,68,0.9);
 }
 .scan-frame::before,
 .scan-frame::after,

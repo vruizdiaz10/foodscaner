@@ -404,6 +404,11 @@ function hashDiff(a, b) {
   return Math.abs(a - b) / (a || 1);
 }
 
+function setScanState(state) {
+  scannerView.classList.remove('scanning', 'detecting', 'failed');
+  if (state) scannerView.classList.add(state);
+}
+
 function preprocessImage(imageData) {
   const d = imageData.data;
   const len = d.length;
@@ -517,6 +522,7 @@ async function startScanningNative(cameraId) {
       }
 
       detecting = true;
+      setScanState('scanning');
 
       // Preprocess for ZBar (grayscale + contrast)
       const processed = preprocessImage(new ImageData(new Uint8ClampedArray(imageData.data), imageData.width, imageData.height));
@@ -543,11 +549,13 @@ async function startScanningNative(cameraId) {
       Promise.any(decoders)
         .then(code => {
           detecting = false;
+          setScanState('detecting');
           if (!isScanning) return;
           if (!onBarcodeDetected(code)) nativeScanRafId = requestAnimationFrame(tick);
         })
         .catch(() => {
           detecting = false;
+          setScanState('failed');
           if (isScanning) nativeScanRafId = requestAnimationFrame(tick);
         });
     };
@@ -574,6 +582,7 @@ async function startScanningNative(cameraId) {
 }
 
 function stopScanningNative() {
+  setScanState(null);
   if (scanTimeoutId) { clearInterval(scanTimeoutId); scanTimeoutId = null; }
   lastDecoded = null;
   confirmCount = 0;
