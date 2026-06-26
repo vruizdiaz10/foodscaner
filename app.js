@@ -404,6 +404,24 @@ function hashDiff(a, b) {
   return Math.abs(a - b) / (a || 1);
 }
 
+function preprocessImage(imageData) {
+  const d = imageData.data;
+  const len = d.length;
+  let min = 255, max = 0;
+  for (let i = 0; i < len; i += 4) {
+    const gray = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
+    d[i] = d[i+1] = d[i+2] = gray;
+    if (gray < min) min = gray;
+    if (gray > max) max = gray;
+  }
+  const range = max - min || 1;
+  for (let i = 0; i < len; i += 4) {
+    const v = ((d[i] - min) / range) * 255 | 0;
+    d[i] = d[i+1] = d[i+2] = v;
+  }
+  return imageData;
+}
+
 function decodeNative(detector, canvas) {
   if (!detector) return Promise.reject('BarcodeDetector no disponible');
   return detector.detect(canvas).then(b => b.length ? b[0].rawValue : Promise.reject('BarcodeDetector: código no encontrado'));
@@ -479,8 +497,8 @@ async function startScanningNative(cameraId) {
         return;
       }
 
-      // Canvas 1000px max width (better for low-res webcams)
-      const maxW = 1000;
+      // Canvas 1200px max width
+      const maxW = 1200;
       const sc = Math.min(1, maxW / video.videoWidth);
       canvas.width = Math.round(video.videoWidth * sc);
       canvas.height = Math.round(video.videoHeight * sc);
@@ -500,11 +518,27 @@ async function startScanningNative(cameraId) {
 
       detecting = true;
 
-      // Both decoders in PARALLEL
-      const decoders = [decodeNative(detector, canvas)];
-      if (window.zbarWasm && typeof window.zbarWasm.scanImageData === 'function' && !window._zbarFailed) {
-        decoders.push(decodeZbar(imageData));
-      }
+      // Preprocess for ZBar (grayscale + contrast)
+      const processed = preprocessImage(new ImageData(new Uint8ClampedArray(imageData.data), imageData.width, imageData.height));
+
+      // Dual scale: small canvas for tiny barcodes
+      const smallW = Math.round(canvas.width * 500 / maxW);
+      const smallH = Math.round(canvas.height * 500 / maxW);
+      const smallCanvas = document.createElement('canvas');
+      smallCanvas.width = smallW;
+      smallCanvas.height = smallH;
+      const sctx = smallCanvas.getContext('2d', { willReadFrequently: true });
+      sctx.drawImage(canvas, 0, 0, smallW, smallH);
+      const smallData = sctx.getImageData(0, 0, smallW, smallH);
+      const smallProcessed = preprocessImage(smallData);
+
+      // 4 decoders in parallel: 2 scales × 2 engines
+      const decoders = [
+        decodeNative(detector, canvas),
+        decodeNative(detector, smallCanvas),
+        decodeZbar(processed),
+        decodeZbar(smallProcessed)
+      ];
 
       Promise.any(decoders)
         .then(code => {
