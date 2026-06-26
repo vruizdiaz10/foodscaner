@@ -91,6 +91,18 @@
                 <input type="range" id="zoom-slider" class="zoom-slider">
               </div>
             </div>
+            <button id="btn-debug" class="btn-debug hidden" title="Diagnóstico de escaneo">🐛</button>
+            <div id="scanner-debug" class="scanner-debug hidden">
+              <div class="debug-row"><span class="debug-label">Cámara</span><span id="debug-camera" class="debug-value">—</span></div>
+              <div class="debug-row"><span class="debug-label">Resolución</span><span id="debug-resolution" class="debug-value">—</span></div>
+              <div class="debug-row"><span class="debug-label">Frames</span><span id="debug-frames" class="debug-value">0</span></div>
+              <div class="debug-row"><span class="debug-label">Decodes</span><span id="debug-decodes" class="debug-value">0</span></div>
+              <div class="debug-row"><span class="debug-label">Aciertos</span><span id="debug-hits" class="debug-value">0</span></div>
+              <div class="debug-row"><span class="debug-label">Errores</span><span id="debug-errors" class="debug-value">0</span></div>
+              <div class="debug-row"><span class="debug-label">BarcodeDetector</span><span id="debug-bd" class="debug-value">—</span></div>
+              <div class="debug-row"><span class="debug-label">ZBar-WASM</span><span id="debug-zbar" class="debug-value">—</span></div>
+              <div class="debug-row debug-last"><span class="debug-label">Últ. error</span><span id="debug-last-error" class="debug-value debug-error">—</span></div>
+            </div>
           </div>
         </div>
 
