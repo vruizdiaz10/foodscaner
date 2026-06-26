@@ -402,18 +402,30 @@ async function startScanningNative(cameraId) {
         return;
       }
       detecting = true;
-      const BAND_FRAC = 0.55;
-      const bandH = Math.round(video.videoHeight * BAND_FRAC);
-      const sy = Math.round((video.videoHeight - bandH) / 2);
-      canvas.width = video.videoWidth;
+      const vw = video.videoWidth, vh = video.videoHeight;
+      const bandH = Math.round(vh * 0.55);
+      const sy = Math.round((vh - bandH) / 2);
+      // First pass: center band (better for curved/cylindrical surfaces)
+      canvas.width = vw;
       canvas.height = bandH;
-      ctx.drawImage(video, 0, sy, video.videoWidth, bandH, 0, 0, video.videoWidth, bandH);
-      detector.detect(canvas).then(barcodes => {
-        detecting = false;
-        if (!isScanning) return;
-        if (barcodes.length > 0) onBarcodeDetected(barcodes[0].rawValue);
-        else nativeScanRafId = requestAnimationFrame(tick);
-      }).catch(() => { detecting = false; if (isScanning) nativeScanRafId = requestAnimationFrame(tick); });
+      ctx.drawImage(video, 0, sy, vw, bandH, 0, 0, vw, bandH);
+      detector.detect(canvas)
+        .then(barcodes => {
+          if (!isScanning) { detecting = false; return null; }
+          if (barcodes.length > 0) { detecting = false; onBarcodeDetected(barcodes[0].rawValue); return null; }
+          // Second pass: full frame fallback (barcode not vertically centered)
+          canvas.height = vh;
+          ctx.drawImage(video, 0, 0);
+          return detector.detect(canvas);
+        })
+        .then(barcodes => {
+          if (!barcodes) return;
+          detecting = false;
+          if (!isScanning) return;
+          if (barcodes.length > 0) onBarcodeDetected(barcodes[0].rawValue);
+          else nativeScanRafId = requestAnimationFrame(tick);
+        })
+        .catch(() => { detecting = false; if (isScanning) nativeScanRafId = requestAnimationFrame(tick); });
     };
     nativeScanRafId = requestAnimationFrame(tick);
   } catch (err) {
