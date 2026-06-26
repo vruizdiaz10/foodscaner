@@ -381,16 +381,24 @@ function decodeNative(detector, canvas) {
 
 function decodeZbar(imageData) {
   const zw = window.zbarWasm;
+  if (window._zbarFailed) return Promise.reject('ZBar: previamente falló');
   if (!zw || typeof zw.scanImageData !== 'function') {
+    window._zbarFailed = true;
     return Promise.reject('ZBar: scanImageData=' + typeof zw?.scanImageData + ' keys=' + Object.keys(zw || {}).join(','));
   }
   try {
     return zw.scanImageData(imageData).then(syms => {
       for (const s of syms) { const v = s.decode(); if (v) return v; }
       return Promise.reject('ZBar: código no encontrado');
-    }, err => Promise.reject('ZBar: ' + (err?.message || err)));
+    }, err => {
+      const msg = err?.message || err || '';
+      if (msg.includes('abort') || msg.includes('Abort')) window._zbarFailed = true;
+      return Promise.reject('ZBar: ' + msg);
+    });
   } catch (e) {
-    return Promise.reject('ZBar: ' + (e?.message || e));
+    const msg = e?.message || e || '';
+    if (msg.includes('abort') || msg.includes('Abort')) window._zbarFailed = true;
+    return Promise.reject('ZBar: ' + msg);
   }
 }
 
@@ -426,6 +434,7 @@ async function startScanningNative(cameraId) {
   }
   // Initialize diagnostic counters
   scanDebug = { frames: 0, decodes: 0, hits: 0, errors: 0, lastError: '', lastNativeError: '', lastZbarError: '', cameraLabel: '', resolution: '', bdReady: !!('BarcodeDetector' in window), zbarReady: !!(window.zbarWasm && typeof window.zbarWasm.scanImageData === 'function') };
+  window._zbarFailed = false;
   document.getElementById('btn-debug')?.classList.remove('hidden');
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
