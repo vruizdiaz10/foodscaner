@@ -380,11 +380,17 @@ function decodeNative(detector, canvas) {
 }
 
 function decodeZbar(imageData) {
-  if (!window.zbarWasm) return Promise.reject('ZBar-WASM no cargado');
-  return window.zbarWasm.scanImageData(imageData).then(syms => {
-    for (const s of syms) { const v = s.decode(); if (v) return v; }
-    return Promise.reject('ZBar: código no encontrado');
-  });
+  if (!window.zbarWasm || typeof window.zbarWasm.scanImageData !== 'function') {
+    return Promise.reject('ZBar-WASM: scanImageData no disponible');
+  }
+  try {
+    return window.zbarWasm.scanImageData(imageData).then(syms => {
+      for (const s of syms) { const v = s.decode(); if (v) return v; }
+      return Promise.reject('ZBar: código no encontrado');
+    });
+  } catch (e) {
+    return Promise.reject('ZBar: ' + (e?.message || e));
+  }
 }
 
 function toggleScanDebug() {
@@ -412,13 +418,13 @@ function updateScanDebug() {
 }
 
 async function startScanningNative(cameraId) {
-  if (!('BarcodeDetector' in window) && !window.zbarWasm) {
+  if (!('BarcodeDetector' in window) && !(window.zbarWasm && typeof window.zbarWasm.scanImageData === 'function')) {
     alert('El escáner aún no está listo. Ingresa el código manualmente.');
     resetCameraButton();
     return;
   }
   // Initialize diagnostic counters
-  scanDebug = { frames: 0, decodes: 0, hits: 0, errors: 0, lastError: '', lastNativeError: '', lastZbarError: '', cameraLabel: '', resolution: '', bdReady: !!('BarcodeDetector' in window), zbarReady: !!window.zbarWasm };
+  scanDebug = { frames: 0, decodes: 0, hits: 0, errors: 0, lastError: '', lastNativeError: '', lastZbarError: '', cameraLabel: '', resolution: '', bdReady: !!('BarcodeDetector' in window), zbarReady: !!(window.zbarWasm && typeof window.zbarWasm.scanImageData === 'function') };
   document.getElementById('btn-debug')?.classList.remove('hidden');
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
