@@ -21,6 +21,11 @@
     import { BarcodeDetector } from "https://esm.sh/barcode-detector@2/pure";
     if (!('BarcodeDetector' in window)) window.BarcodeDetector = BarcodeDetector;
   </script>
+  <!-- ZBar-WASM: segundo motor en carrera (más robusto en códigos borrosos/curvos) -->
+  <script type="module">
+    import * as zbarWasm from "https://esm.sh/@undecaf/zbar-wasm@0.11.0";
+    window.zbarWasm = zbarWasm;
+  </script>
 </head>
 <body>
 
@@ -598,6 +603,6 @@
   </div>
 
   <!-- App Main Javascript -->
-  <script src="app.js?v=55" defer></script>
+  <script src="app.js?v=56" defer></script>
 </body>
 </html>

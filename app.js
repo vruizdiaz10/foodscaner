@@ -348,7 +348,7 @@ function resetCameraButton() {
 
 function onBarcodeDetected(rawCode) {
   const result = validateBarcode(rawCode);
-  if (!result.valid) return;
+  if (!result.valid) return false;
   barcodeInput.value = result.code;
   if (navigator.vibrate) navigator.vibrate(100);
   try {
@@ -366,10 +366,23 @@ function onBarcodeDetected(rawCode) {
   } catch (e) { /* audio not available */ }
   stopScanning();
   analyzeBarcode(result.code);
+  return true;
+}
+
+function decodeNative(detector, canvas) {
+  if (!detector) return Promise.reject();
+  return detector.detect(canvas).then(b => b.length ? b[0].rawValue : Promise.reject());
+}
+function decodeZbar(imageData) {
+  if (!window.zbarWasm) return Promise.reject();
+  return window.zbarWasm.scanImageData(imageData).then(syms => {
+    for (const s of syms) { const v = s.decode(); if (v) return v; }
+    return Promise.reject();
+  });
 }
 
 async function startScanningNative(cameraId) {
-  if (!('BarcodeDetector' in window)) {
+  if (!('BarcodeDetector' in window) && !window.zbarWasm) {
     alert('El escáner aún no está listo. Ingresa el código manualmente.');
     resetCameraButton();
     return;
@@ -391,7 +404,7 @@ async function startScanningNative(cameraId) {
     scannerView.appendChild(video);
     await video.play();
     await new Promise(r => video.readyState >= 2 ? r() : video.addEventListener('loadeddata', r, { once: true }));
-    const detector = new BarcodeDetector({ formats: ['ean_13', 'upc_a', 'upc_e', 'ean_8'] });
+    const detector = ('BarcodeDetector' in window) ? new BarcodeDetector({ formats: ['ean_13', 'upc_a', 'upc_e', 'ean_8'] }) : null;
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     let detecting = false;
@@ -402,28 +415,15 @@ async function startScanningNative(cameraId) {
         return;
       }
       detecting = true;
-      const vw = video.videoWidth, vh = video.videoHeight;
-      const bandH = Math.round(vh * 0.55);
-      const sy = Math.round((vh - bandH) / 2);
-      // First pass: center band (better for curved/cylindrical surfaces)
-      canvas.width = vw;
-      canvas.height = bandH;
-      ctx.drawImage(video, 0, sy, vw, bandH, 0, 0, vw, bandH);
-      detector.detect(canvas)
-        .then(barcodes => {
-          if (!isScanning) { detecting = false; return null; }
-          if (barcodes.length > 0) { detecting = false; onBarcodeDetected(barcodes[0].rawValue); return null; }
-          // Second pass: full frame fallback (barcode not vertically centered)
-          canvas.height = vh;
-          ctx.drawImage(video, 0, 0);
-          return detector.detect(canvas);
-        })
-        .then(barcodes => {
-          if (!barcodes) return;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      Promise.any([decodeNative(detector, canvas), decodeZbar(imageData)])
+        .then(code => {
           detecting = false;
           if (!isScanning) return;
-          if (barcodes.length > 0) onBarcodeDetected(barcodes[0].rawValue);
-          else nativeScanRafId = requestAnimationFrame(tick);
+          if (!onBarcodeDetected(code)) nativeScanRafId = requestAnimationFrame(tick);
         })
         .catch(() => { detecting = false; if (isScanning) nativeScanRafId = requestAnimationFrame(tick); });
     };
