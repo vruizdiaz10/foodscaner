@@ -53,7 +53,6 @@ function renderGrid() {
           ${badgeHtml(item.rating)}
         </div>
       </div>
-      <button class="product-card-bookmark" aria-label="Guardar">+</button>
     </div>
   `).join('');
 }
@@ -75,7 +74,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('products-grid').addEventListener('click', e => {
     const card = e.target.closest('.product-card');
     if (!card) return;
-    if (e.target.closest('.product-card-bookmark')) return; // ignore bookmark tap
     window.location.href = 'scan.html?barcode=' + encodeURIComponent(card.dataset.barcode);
   });
 });
