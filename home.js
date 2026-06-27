@@ -4,6 +4,10 @@ function getHistory() {
   try { return JSON.parse(localStorage.getItem('yomi_history')) || []; } catch { return []; }
 }
 
+function placeholderSvg() {
+  return "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>');
+}
+
 function badgeHtml(rating) {
   if (!rating) return '';
   const r = String(rating).toLowerCase();
@@ -18,7 +22,7 @@ function badgeHtml(rating) {
 
 function imgHtml(item) {
   if (item.image) {
-    return `<img class="product-card-img" src="${item.image}" alt="" onerror="this.replaceWith(document.querySelector('#img-placeholder-tpl').content.cloneNode(true))">`;
+    return `<img class="product-card-img" src="${item.image}" alt="" onerror="this.onerror=null;this.src='${placeholderSvg()}'">`;
   }
   return `<div class="product-card-img-placeholder">
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#0d3d35" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
