@@ -637,8 +637,64 @@ function teardownScanControls() {
   cameraHud.classList.add('hidden');
 }
 
-function closeCameraPopover() {}
-function setupCameraSwitch() {}
+const isTouchDevice = navigator.maxTouchPoints > 1;
+
+function setupCameraSwitch() {
+  if (isTouchDevice) {
+    btnCameraSwitch.onclick = () => {
+      const opts = cameraSelect.options;
+      if (opts.length < 2) return;
+      cameraSelect.selectedIndex = (cameraSelect.selectedIndex + 1) % opts.length;
+      restartCameraWithSelectedDevice();
+    };
+  } else {
+    btnCameraSwitch.onclick = (e) => {
+      e.stopPropagation();
+      if (document.getElementById('camera-popover')) {
+        closeCameraPopover();
+        return;
+      }
+      openCameraPopover();
+    };
+  }
+}
+
+function openCameraPopover() {
+  const popover = document.createElement('div');
+  popover.id = 'camera-popover';
+  popover.className = 'camera-popover';
+
+  Array.from(cameraSelect.options).forEach(opt => {
+    const isActive = opt.value === cameraSelect.value;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'camera-popover-option' + (isActive ? ' active' : '');
+    btn.innerHTML = `<span class="pop-check">${isActive ? '✓' : ''}</span>${esc(opt.text)}`;
+    btn.onclick = () => {
+      cameraSelect.value = opt.value;
+      restartCameraWithSelectedDevice();
+      closeCameraPopover();
+    };
+    popover.appendChild(btn);
+  });
+
+  cameraHud.appendChild(popover);
+
+  requestAnimationFrame(() => {
+    document.addEventListener('click', closeCameraPopover, { once: true });
+    document.addEventListener('keydown', handlePopoverEsc);
+  });
+}
+
+function closeCameraPopover() {
+  const popover = document.getElementById('camera-popover');
+  if (popover) popover.remove();
+  document.removeEventListener('keydown', handlePopoverEsc);
+}
+
+function handlePopoverEsc(e) {
+  if (e.key === 'Escape') closeCameraPopover();
+}
 
 let scanActivityTimer = null;
 let scanHintEl = null;
