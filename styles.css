@@ -784,7 +784,7 @@ body {
 
 /* ── Success State (Product) ─────────────────────── */
 #result-success {
-  display: block;
+  flex-direction: column;
   width: 100%;
   text-align: left;
 }
