@@ -18,7 +18,6 @@ let currentScanLogId = null;
 
 // DOM Elements
 const btnToggleCamera = document.getElementById("btn-toggle-camera");
-const cameraSelectWrapper = document.getElementById("camera-select-wrapper");
 const cameraSelect = document.getElementById("camera-select");
 const barcodeForm = document.getElementById("barcode-form");
 const barcodeInput = document.getElementById("barcode-input");
@@ -375,13 +374,16 @@ function onBarcodeDetected(rawCode) {
   analyzeBarcode(result.code);
   return true;
 }
+const _HASH_PTS   = [0.25, 0.5, 0.75];
+const _HASH_FIXED = [[0.1,0.1],[0.9,0.1],[0.1,0.9],[0.9,0.9],[0.5,0.1],[0.5,0.9],[0.33,0.33]];
+
 function quickHash(imageData) {
   const d = imageData.data;
   const w = imageData.width;
   const h = imageData.height;
   let sum = 0;
-  const pts = [0.25, 0.5, 0.75];
-  const fixed = [[0.1, 0.1], [0.9, 0.1], [0.1, 0.9], [0.9, 0.9], [0.5, 0.1], [0.5, 0.9], [0.33, 0.33]];
+  const pts = _HASH_PTS;
+  const fixed = _HASH_FIXED;
   for (const fy of pts) for (const fx of pts) {
     const i = (Math.floor(fy * h) * w + Math.floor(fx * w)) * 4;
     sum += d[i] + d[i + 1] + d[i + 2];
@@ -2047,11 +2049,6 @@ function runAICheck(product, barcode) {
         renderDietaryBadges(product);
       }
     }
-
-
-
-    loadingEl.classList.add("hidden");
-    errorEl.classList.add("hidden");
   }
 
   // --- Ejecución secuencial: 7 proveedores en cadena ---
