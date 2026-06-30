@@ -66,6 +66,7 @@ const carbsProgress = document.getElementById("carbs-progress");
 const carbsLevel = document.getElementById("carbs-level");
 const cardSellos = document.getElementById("card-sellos");
 const sellosContainer = document.getElementById("sellos-container");
+const cardAllergens = document.getElementById("card-allergens");
 
 // Result Elements (Rejected)
 const rejectedTitle = document.getElementById("rejected-title");
@@ -1809,6 +1810,7 @@ function renderProductData(product, barcode) {
       tracesSection.classList.add("hidden");
     }
   }
+  cardAllergens.classList.remove("hidden");
 
   // Render Mexican warning seals (NOM-051)
   if (cardSellos && sellosContainer) {
