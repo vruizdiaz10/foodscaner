@@ -1221,6 +1221,75 @@ function validCol(req, res, next) {
 
 app.get('/api/admin/login-check', requireAdmin, (req, res) => res.json({ ok: true }));
 
+app.get('/api/admin/cache-all', requireAdmin, async (req, res) => {
+  // Product cache: merge L1 (memory) + L2 (Firestore)
+  const l1ProductKeys = Object.keys(memoryCache);
+  const l2Product = await fireListDocs('product_cache', null);
+  const l2ProductIds = new Set((l2Product?.items || []).map(i => i.id));
+
+  const productMap = new Map();
+  for (const barcode of l1ProductKeys) {
+    const entry = memoryCache[barcode];
+    productMap.set(barcode, {
+      barcode,
+      source: entry.source || 'unknown',
+      inL1: true,
+      inL2: l2ProductIds.has(barcode),
+      cachedAt: entry.cachedAt || 0
+    });
+  }
+  for (const item of (l2Product?.items || [])) {
+    if (!productMap.has(item.id)) {
+      const d = item.data || {};
+      productMap.set(item.id, {
+        barcode: item.id,
+        source: d.source || 'unknown',
+        inL1: false,
+        inL2: true,
+        cachedAt: d.cachedAt || 0
+      });
+    }
+  }
+
+  // AI cache: merge L1 (memory) + L2 (Firestore)
+  const l1AiKeys = Object.keys(memoryAiCache);
+  const l2Ai = await fireListDocs('ai_cache', null);
+  const l2AiIds = new Set((l2Ai?.items || []).map(i => i.id));
+
+  const aiMap = new Map();
+  for (const key of l1AiKeys) {
+    const entry = memoryAiCache[key];
+    const resp = entry.response || {};
+    aiMap.set(key, {
+      key,
+      displayName: key.split('|')[0] || key.substring(0, 60),
+      model: resp._model || '',
+      inL1: true,
+      inL2: l2AiIds.has(key),
+      cachedAt: entry.cachedAt || 0
+    });
+  }
+  for (const item of (l2Ai?.items || [])) {
+    if (!aiMap.has(item.id)) {
+      const d = item.data || {};
+      const resp = d.response || d;
+      aiMap.set(item.id, {
+        key: item.id,
+        displayName: item.id.split('|')[0] || item.id.substring(0, 60),
+        model: resp._model || '',
+        inL1: false,
+        inL2: true,
+        cachedAt: d.cachedAt || 0
+      });
+    }
+  }
+
+  res.json({
+    product: [...productMap.values()].sort((a, b) => b.cachedAt - a.cachedAt),
+    ai: [...aiMap.values()].sort((a, b) => b.cachedAt - a.cachedAt)
+  });
+});
+
 app.get('/api/admin/:collection', requireAdmin, validCol, async (req, res) => {
   const result = await fireListDocs(req.params.collection, req.query.pageToken || null);
   if (!result) return res.status(500).json({ error: 'Error al listar documentos' });
