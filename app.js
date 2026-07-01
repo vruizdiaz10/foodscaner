@@ -727,12 +727,15 @@ function showState(stateElement) {
 
   const controlPanel = document.querySelector(".control-panel");
   const resultsPanel = document.querySelector(".results-panel");
+  const manualInput = document.getElementById("manual-input-section");
   const isDesktop = window.matchMedia("(min-width: 769px)").matches;
   if (stateElement === resultEmpty) {
     controlPanel.classList.remove("hidden");
+    if (manualInput) manualInput.classList.remove("hidden");
     if (resultsPanel) resultsPanel.classList.add("hidden");
   } else {
     if (!isDesktop) controlPanel.classList.add("hidden");
+    if (isDesktop && manualInput) manualInput.classList.add("hidden");
     if (resultsPanel) resultsPanel.classList.remove("hidden");
     const target = stateElement.closest(".results-panel") || stateElement;
     target.scrollIntoView({ behavior: "smooth", block: "start" });
