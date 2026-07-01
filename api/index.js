@@ -1233,11 +1233,17 @@ app.get('/api/admin/cache-all', requireAdmin, async (req, res) => {
   const l2Product = await fireListDocs('product_cache', null);
   const l2ProductIds = new Set((l2Product?.items || []).map(i => i.id));
 
+  const productNameOf = p => p?.product_name || p?.name || '';
+  const productBrandOf = p => p?.brands || p?.brand || '';
+
   const productMap = new Map();
   for (const barcode of l1ProductKeys) {
     const entry = memoryCache[barcode];
+    const p = entry.response?.product;
     productMap.set(barcode, {
       barcode,
+      name: productNameOf(p),
+      brand: productBrandOf(p),
       source: entry.source || 'unknown',
       inL1: true,
       inL2: l2ProductIds.has(barcode),
@@ -1247,8 +1253,11 @@ app.get('/api/admin/cache-all', requireAdmin, async (req, res) => {
   for (const item of (l2Product?.items || [])) {
     if (!productMap.has(item.id)) {
       const d = item.data || {};
+      const p = d.response?.product;
       productMap.set(item.id, {
         barcode: item.id,
+        name: productNameOf(p),
+        brand: productBrandOf(p),
         source: d.source || 'unknown',
         inL1: false,
         inL2: true,
@@ -1257,10 +1266,25 @@ app.get('/api/admin/cache-all', requireAdmin, async (req, res) => {
     }
   }
 
+  // Best-effort name+brand -> barcode(s) lookup, used to enrich AI entries below
+  const normalize = s => (s || '').toLowerCase().trim();
+  const barcodesByNameBrand = new Map();
+  for (const p of productMap.values()) {
+    if (!p.name) continue;
+    const nbKey = normalize(p.name) + '|' + normalize(p.brand);
+    if (!barcodesByNameBrand.has(nbKey)) barcodesByNameBrand.set(nbKey, []);
+    barcodesByNameBrand.get(nbKey).push(p.barcode);
+  }
+
   // AI cache: merge L1 (memory) + L2 (Firestore)
   const l1AiKeys = Object.keys(memoryAiCache);
   const l2Ai = await fireListDocs('ai_cache', null);
   const l2AiIds = new Set((l2Ai?.items || []).map(i => i.id));
+
+  const barcodesForKey = key => {
+    const [name, brand] = key.split('|');
+    return barcodesByNameBrand.get(normalize(name) + '|' + normalize(brand)) || [];
+  };
 
   const aiMap = new Map();
   for (const key of l1AiKeys) {
@@ -1269,6 +1293,7 @@ app.get('/api/admin/cache-all', requireAdmin, async (req, res) => {
     aiMap.set(key, {
       key,
       displayName: key.split('|')[0] || key.substring(0, 60),
+      barcodes: barcodesForKey(key),
       model: resp._model || '',
       inL1: true,
       inL2: l2AiIds.has(key),
@@ -1282,6 +1307,7 @@ app.get('/api/admin/cache-all', requireAdmin, async (req, res) => {
       aiMap.set(item.id, {
         key: item.id,
         displayName: item.id.split('|')[0] || item.id.substring(0, 60),
+        barcodes: barcodesForKey(item.id),
         model: resp._model || '',
         inL1: false,
         inL2: true,

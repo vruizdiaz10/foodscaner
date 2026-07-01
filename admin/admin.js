@@ -146,8 +146,8 @@
   function renderCacheAll(data, filterText = '') {
     let { product = [], ai = [] } = data;
     if (filterText) {
-      product = product.filter(i => (i.barcode || '').toLowerCase().includes(filterText) || (i.source || '').toLowerCase().includes(filterText));
-      ai = ai.filter(i => (i.key || '').toLowerCase().includes(filterText) || (i.displayName || '').toLowerCase().includes(filterText) || (i.model || '').toLowerCase().includes(filterText));
+      product = product.filter(i => (i.barcode || '').toLowerCase().includes(filterText) || (i.name || '').toLowerCase().includes(filterText) || (i.source || '').toLowerCase().includes(filterText));
+      ai = ai.filter(i => (i.key || '').toLowerCase().includes(filterText) || (i.displayName || '').toLowerCase().includes(filterText) || (i.model || '').toLowerCase().includes(filterText) || (i.barcodes || []).some(b => b.includes(filterText)));
     }
     let html = '';
 
@@ -164,7 +164,7 @@
         return `<div class="doc-item">
           <div>
             <div class="doc-id">${escHtml(item.barcode)}</div>
-            <div class="doc-meta"><span class="cache-source">${escHtml(item.source)}</span> · ${escHtml(date)}</div>
+            <div class="doc-meta">${item.name ? escHtml(item.name) + ' · ' : ''}<span class="cache-source">${escHtml(item.source)}</span> · ${escHtml(date)}</div>
           </div>
           <div class="doc-actions">
             <span class="cache-badge ${badgeCls}">${badge}</span>
@@ -186,10 +186,11 @@
         const layer = item.inL1 && item.inL2 ? 'all' : item.inL1 ? 'l1' : 'l2';
         const date = item.cachedAt ? new Date(item.cachedAt * 1000).toLocaleString('es-MX') : '—';
         const displayName = item.displayName.length > 60 ? item.displayName.substring(0, 60) + '…' : item.displayName;
+        const barcodesLabel = (item.barcodes && item.barcodes.length) ? item.barcodes.join(', ') : '—';
         return `<div class="doc-item">
           <div>
             <div class="doc-id">${escHtml(displayName)}</div>
-            <div class="doc-meta">${escHtml(item.model || '—')} · ${escHtml(date)}</div>
+            <div class="doc-meta">${escHtml(barcodesLabel)} · ${escHtml(item.model || '—')} · ${escHtml(date)}</div>
           </div>
           <div class="doc-actions">
             <span class="cache-badge ${badgeCls}">${badge}</span>
