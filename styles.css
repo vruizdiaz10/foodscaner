@@ -2140,6 +2140,11 @@ body {
     border-right: 1px solid var(--border);
     padding: 16px 20px;
   }
+  /* Slightly shorter camera preview so the rejected/not-found state
+     (camera + manual search + retry button) fits without a scrollbar. */
+  .control-panel .scanner-view {
+    max-height: calc(100svh - 400px);
+  }
   .results-panel:not(.hidden) {
     grid-column: 2;
     display: block !important;
