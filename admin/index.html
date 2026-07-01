@@ -100,6 +100,21 @@
     .conf-wrap:hover .conf-tooltip { display: block; }
     .conf-tooltip-level { font-weight: 700; margin-bottom: 4px; }
     .conf-tooltip-notes { color: rgba(255,255,255,0.75); }
+    /* Resumen */
+    .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 20px; }
+    .stat-card { border: 2px solid var(--border); border-radius: var(--radius-sm); background: var(--paper); box-shadow: 2px 2px 0 var(--border); padding: 14px; }
+    .stat-card .num { font-family: var(--font-mono); font-size: 1.6rem; font-weight: 600; color: var(--ink); }
+    .stat-card .lbl { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+    .stats-h { font-family: var(--font-display); font-size: 1rem; color: var(--ink); margin: 20px 0 10px; }
+    .chart { display: flex; align-items: flex-end; gap: 3px; height: 120px; border: 2px solid var(--border); border-radius: var(--radius-sm); background: var(--paper); padding: 10px; box-sizing: border-box; }
+    .chart .bar { flex: 1; background: var(--green); min-height: 2px; border-radius: 2px 2px 0 0; }
+    .stats-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    @media (max-width: 720px) { .stats-cols { grid-template-columns: 1fr; } }
+    .bk-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 0.8rem; color: var(--ink); }
+    .bk-key { width: 80px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bk-bar { flex: 1; height: 10px; background: var(--surface); border-radius: 3px; overflow: hidden; }
+    .bk-bar span { display: block; height: 100%; background: var(--green); }
+    .bk-n { font-family: var(--font-mono); font-size: 0.75rem; width: 36px; text-align: right; }
   </style>
 </head>
 <body style="background:var(--paper);min-height:100vh;">

@@ -29,6 +29,52 @@
     docList.innerHTML = '<div class="empty-msg">Cargando…</div>';
     statsBar.textContent = '';
     loadMoreEl.innerHTML = '';
+    const r = await apiFetch('/api/admin/stats');
+    if (!r.ok) { docList.innerHTML = '<div class="empty-msg">Error al cargar.</div>'; return; }
+    renderStats(await r.json());
+  }
+
+  function renderStats(s) {
+    document.querySelectorAll('.nav-count').forEach(el => {
+      const c = s.counts && s.counts[el.dataset.count];
+      el.textContent = (c != null) ? c : '';
+    });
+    const max = Math.max(1, ...s.byDay.map(d => d.count));
+    const bars = s.byDay.map(d =>
+      `<div class="bar" style="height:${Math.max(2, Math.round(d.count / max * 100))}%" title="${escHtml(d.date)}: ${d.count}"></div>`
+    ).join('');
+    const topRows = s.topProducts.map(p => `<tr>
+      <td class="mono"><a class="barcode-link" target="_blank" rel="noopener" href="https://www.yomi.mx/scan.html?barcode=${encodeURIComponent(p.barcode)}">${escHtml(p.barcode)}</a></td>
+      <td>${escHtml(p.name || '—')}</td>
+      <td class="mono">${p.count}</td>
+    </tr>`).join('');
+    const breakdown = list => (list && list.length)
+      ? list.slice(0, 8).map(r => {
+          const pct = s.total ? Math.round(r.count / s.total * 100) : 0;
+          return `<div class="bk-row"><span class="bk-key" title="${escHtml(r.key)}">${escHtml(r.key)}</span><span class="bk-bar"><span style="width:${pct}%"></span></span><span class="bk-n">${r.count}</span></div>`;
+        }).join('')
+      : '<div class="empty-msg" style="padding:10px 0;">Sin datos.</div>';
+    docList.innerHTML = `
+      <div class="stat-cards">
+        <div class="stat-card"><div class="num">${s.total}</div><div class="lbl">Escaneos</div></div>
+        <div class="stat-card"><div class="num">${s.today}</div><div class="lbl">Hoy</div></div>
+        <div class="stat-card"><div class="num">${s.uniqueProducts}</div><div class="lbl">Productos únicos</div></div>
+        <div class="stat-card"><div class="num">${s.notFoundPct}%</div><div class="lbl">No encontrados</div></div>
+        <div class="stat-card"><div class="num">${s.ocrPct}%</div><div class="lbl">Con OCR</div></div>
+      </div>
+      <h3 class="stats-h">Escaneos por día (30 días)</h3>
+      <div class="chart">${bars}</div>
+      <div class="stats-cols">
+        <div>
+          <h3 class="stats-h">Top productos</h3>
+          <table class="log-table"><thead><tr><th>Código</th><th>Producto</th><th>#</th></tr></thead>
+          <tbody>${topRows || '<tr><td colspan="3" class="empty-msg">Sin datos.</td></tr>'}</tbody></table>
+        </div>
+        <div>
+          <h3 class="stats-h">País</h3>${breakdown(s.byCountry)}
+          <h3 class="stats-h">Sistema</h3>${breakdown(s.byOS)}
+        </div>
+      </div>`;
   }
 
   async function loadBarcodeFlags() {
