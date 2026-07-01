@@ -705,7 +705,7 @@ function showScanHint() {
   if (scanHintEl) return;
   scanHintEl = document.createElement('p');
   scanHintEl.id = 'scan-coaching';
-  scanHintEl.style.cssText = 'color:rgba(255,255,255,0.6);font-size:0.8rem;text-align:center;margin:8px 0 0;padding:0 16px;line-height:1.4;';
+  scanHintEl.style.cssText = 'color:var(--text-secondary);font-size:0.8rem;text-align:center;margin:8px 0 0;padding:0 16px;line-height:1.4;';
   scanHintEl.textContent = 'Centra el código y mueve el teléfono despacio de lado a lado';
   if (scannerWrapper) scannerWrapper.insertBefore(scanHintEl, scannerWrapper.querySelector('.scanner-controls').nextSibling);
   scanActivityTimer = setTimeout(() => {
