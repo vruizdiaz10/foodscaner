@@ -79,11 +79,28 @@
     loadCollection();
   });
 
-  filterInput.addEventListener('input', () => renderList());
+  filterInput.addEventListener('input', () => {
+    if (currentCol === 'cache') {
+      loadCollection();
+    } else {
+      renderList();
+    }
+  });
 
   async function loadCollection(append = false) {
     if (!append) { allItems = []; nextPageToken = null; docList.innerHTML = '<div class="empty-msg">Cargando…</div>'; loadMoreEl.innerHTML = ''; }
     if (currentCol === 'scan_logs' && !append) await loadBarcodeFlags();
+
+    if (currentCol === 'cache') {
+      const r = await apiFetch('/api/admin/cache-all');
+      if (!r.ok) { docList.innerHTML = '<div class="empty-msg">Error al cargar.</div>'; return; }
+      const data = await r.json();
+      renderCacheAll(data);
+      statsBar.textContent = (data.product.length + data.ai.length) + ' entradas cacheadas';
+      loadMoreEl.innerHTML = '';
+      return;
+    }
+
     const url = '/api/admin/' + currentCol + (nextPageToken ? '?pageToken=' + encodeURIComponent(nextPageToken) : '');
     const r = await apiFetch(url);
     if (!r.ok) { docList.innerHTML = '<div class="empty-msg">Error al cargar.</div>'; return; }
@@ -119,6 +136,61 @@
       <thead><tr><th>Fecha/Hora</th><th>Código</th><th>Categoría</th><th>Comentario</th><th>Sistema</th><th></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
+  }
+
+  function renderCacheAll(data) {
+    const { product = [], ai = [] } = data;
+    let html = '';
+
+    // Product section
+    html += '<div class="cache-section"><h3>📦 Productos</h3>';
+    if (!product.length) {
+      html += '<div class="empty-msg">Sin productos cacheados.</div>';
+    } else {
+      html += product.map(item => {
+        const badge = item.inL1 && item.inL2 ? 'L1+L2' : item.inL1 ? 'L1' : 'L2';
+        const badgeCls = item.inL1 && item.inL2 ? 'cache-badge-both' : item.inL1 ? 'cache-badge-l1' : 'cache-badge-l2';
+        const date = item.cachedAt ? new Date(item.cachedAt * 1000).toLocaleString('es-MX') : '—';
+        return `<div class="doc-item">
+          <div>
+            <div class="doc-id">${escHtml(item.barcode)}</div>
+            <div class="doc-meta"><span class="cache-source">${escHtml(item.source)}</span> · ${escHtml(date)}</div>
+          </div>
+          <div class="doc-actions">
+            <span class="cache-badge ${badgeCls}">${badge}</span>
+            <button class="btn-del" data-action="del-cache" data-type="product" data-key="${escHtml(item.barcode)}" data-layer="${escHtml(badge === 'L1+L2' ? 'all' : badge.toLowerCase())}">✕</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    html += '</div>';
+
+    // AI section
+    html += '<div class="cache-section"><h3>🤖 Análisis IA</h3>';
+    if (!ai.length) {
+      html += '<div class="empty-msg">Sin análisis IA cacheados.</div>';
+    } else {
+      html += ai.map(item => {
+        const badge = item.inL1 && item.inL2 ? 'L1+L2' : item.inL1 ? 'L1' : 'L2';
+        const badgeCls = item.inL1 && item.inL2 ? 'cache-badge-both' : item.inL1 ? 'cache-badge-l1' : 'cache-badge-l2';
+        const date = item.cachedAt ? new Date(item.cachedAt * 1000).toLocaleString('es-MX') : '—';
+        const displayName = item.displayName.length > 60 ? item.displayName.substring(0, 60) + '…' : item.displayName;
+        return `<div class="doc-item">
+          <div>
+            <div class="doc-id">${escHtml(displayName)}</div>
+            <div class="doc-meta">${escHtml(item.model || '—')} · ${escHtml(date)}</div>
+          </div>
+          <div class="doc-actions">
+            <span class="cache-badge ${badgeCls}">${badge}</span>
+            <button class="btn-view" data-action="view-cache" data-key="${escHtml(item.key)}">Ver</button>
+            <button class="btn-del" data-action="del-cache" data-type="ai" data-key="${escHtml(item.key)}" data-layer="${escHtml(badge === 'L1+L2' ? 'all' : badge.toLowerCase())}">✕</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    html += '</div>';
+
+    docList.innerHTML = html;
   }
 
   function renderLogs(items) {
@@ -203,6 +275,7 @@
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
     const id = btn.dataset.id;
+
     if (btn.dataset.action === 'view') {
       const item = allItems.find(i => i.id === id);
       if (!item) return;
@@ -211,7 +284,6 @@
       const imgB64 = d.image;
       const dataWithoutImg = imgB64 ? { ...d, image: '[base64 image]' } : d;
       modalContent.textContent = JSON.stringify(dataWithoutImg, null, 2);
-      // Show photo below JSON if present
       let existingImg = modalOverlay.querySelector('.report-preview-img');
       if (existingImg) existingImg.remove();
       if (imgB64) {
@@ -235,6 +307,26 @@
         btn.disabled = false;
         btn.textContent = 'Eliminar';
       }
+    } else if (btn.dataset.action === 'del-cache') {
+      const type = btn.dataset.type;
+      const key = btn.dataset.key;
+      const layer = btn.dataset.layer;
+      if (!confirm('¿Eliminar "' + key.substring(0, 40) + '" del cache?')) return;
+      btn.disabled = true;
+      btn.textContent = '…';
+      const r = await apiFetch('/api/admin/cache-all/' + type + '/' + encodeURIComponent(key) + '?layer=' + layer, { method: 'DELETE' });
+      if (r.ok) {
+        loadCollection();
+      } else {
+        alert('Error al eliminar.');
+        btn.disabled = false;
+        btn.textContent = '✕';
+      }
+    } else if (btn.dataset.action === 'view-cache') {
+      const key = btn.dataset.key;
+      modalTitle.textContent = key;
+      modalContent.textContent = key;
+      modalOverlay.classList.add('open');
     }
   });
 
