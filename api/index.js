@@ -3,7 +3,8 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const rateLimit = require('express-rate-limit');
-const { getAccessToken, fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache, fireGetOcrData, fireSetOcrData, fireGetNutritionOcr, fireSetNutritionOcr, fireListDocs, fireDeleteDoc, fireLogScan, fireMarkScanNotFound, fireMarkScanHasOcr, fireMarkScanHasNutrition, fireMarkScanConfidence, fireLogReport, ADMIN_COLLECTIONS } = require('./firestore');
+const { getAccessToken, fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache, fireGetOcrData, fireSetOcrData, fireGetNutritionOcr, fireSetNutritionOcr, fireListDocs, fireListAll, fireDeleteDoc, fireLogScan, fireMarkScanNotFound, fireMarkScanHasOcr, fireMarkScanHasNutrition, fireMarkScanConfidence, fireMarkScanSource, fireLogReport, ADMIN_COLLECTIONS } = require('./firestore');
+const { computeStats } = require('./stats');
 
 function detectOS(ua = '') {
   ua = ua.toLowerCase();
@@ -329,6 +330,7 @@ app.get('/api/product/:barcode', async (req, res) => {
       }
 
       if (age < OFF_FRESH_TTL) {
+        fireMarkScanSource(_scanLogId, 'cache');
         return res.json(cached.response);
       }
 
@@ -337,12 +339,14 @@ app.get('/api/product/:barcode', async (req, res) => {
         const currentModified = await checkOFFLastModified(cachedBarcode, host);
         if (currentModified !== null && currentModified === cached.offLastModified) {
           memoryCache[cachedBarcode].cachedAt = now;
+          fireMarkScanSource(_scanLogId, 'cache');
           return res.json(cached.response);
         }
       }
 
       if (!isOFF && age < FALLBACK_TTL) {
         memoryCache[cachedBarcode].cachedAt = now;
+        fireMarkScanSource(_scanLogId, 'cache');
         return res.json(cached.response);
       }
 
@@ -503,6 +507,7 @@ app.get('/api/product/:barcode', async (req, res) => {
         sourceResults.push({ source: "USDA FoodData Central", found: true, productName: pn, brandName: bn, allergenInfo: ai, nutritionInfo: ni });
         const respData = { ...usdaResult, sourceResults };
         await setCacheEntry(barcode, respData, "USDA FoodData Central", null);
+        fireMarkScanSource(_scanLogId, 'db');
         return res.json(respData);
       } else {
         sourceResults.push({ source: "USDA FoodData Central", found: false, productName: "—", brandName: "—", allergenInfo: "—", nutritionInfo: "—" });
@@ -791,6 +796,7 @@ app.get('/api/product/:barcode', async (req, res) => {
       bestResult.product = await addOcrDataIfAvailable(bestResult.product);
       const respData = { ...bestResult, sourceResults };
       await setCacheEntry(barcode, respData, bestSource, bestLastModified);
+      fireMarkScanSource(_scanLogId, 'db');
       return res.json(respData);
     }
 
@@ -820,6 +826,7 @@ app.get('/api/product/:barcode', async (req, res) => {
       fallbackResult.product = await addOcrDataIfAvailable(fallbackResult.product);
       const respData = { ...fallbackResult, sourceResults };
       await setCacheEntry(barcode, respData, "UpcItemDb", null);
+      fireMarkScanSource(_scanLogId, 'db');
       return res.json(respData);
     }
 
@@ -845,6 +852,7 @@ app.get('/api/product/:barcode', async (req, res) => {
 
         const respData = { status: 1, source: 'local', sourceLabel: 'Groq + USDA', product: gp, sourceResults };
         await setCacheEntry(barcode, respData, "Groq+USDA", null);
+        fireMarkScanSource(_scanLogId, 'ia');
         return res.json(respData);
       }
     }
@@ -854,6 +862,7 @@ app.get('/api/product/:barcode', async (req, res) => {
     const ocrOnlyProduct = await addOcrDataIfAvailable(ocrOnlyBase);
     if (ocrOnlyProduct._from_ocr || ocrOnlyProduct._from_nutrition_ocr) {
       const respData = { status: 1, source: 'local', sourceLabel: 'OCR', product: ocrOnlyProduct, sourceResults };
+      fireMarkScanSource(_scanLogId, 'db');
       return res.json(respData);
     }
 
@@ -1227,6 +1236,54 @@ function validCol(req, res, next) {
 
 app.get('/api/admin/login-check', requireAdmin, (req, res) => res.json({ ok: true }));
 
+// ponytail: cache módulo 5 min; en Vercel cada instancia tiene el suyo — suficiente a esta escala.
+let statsCache = { data: null, ts: 0 };
+const STATS_TTL = 5 * 60 * 1000;
+
+app.get('/api/admin/stats', requireAdmin, async (req, res) => {
+  if (statsCache.data && Date.now() - statsCache.ts < STATS_TTL && !req.query.fresh) {
+    return res.json(statsCache.data);
+  }
+  const logs = await fireListAll('scan_logs');
+  if (!logs) return res.status(500).json({ error: 'Error al listar documentos' });
+
+  const names = await barcodeNameMap();
+  const data = computeStats(logs, names);
+
+  const counts = { scan_logs: logs.length };
+  for (const col of ['reports', 'products_ocr', 'products_nutrition']) {
+    const items = await fireListAll(col);
+    counts[col] = items ? items.length : 0;
+  }
+  const l2Ai = await fireListDocs('ai_cache', null);
+  const cacheKeys = new Set([
+    ...Object.keys(memoryCache), ...names.keys(),
+    ...Object.keys(memoryAiCache), ...(l2Ai?.items || []).map(i => i.id)
+  ]);
+  counts.cache = cacheKeys.size;
+  data.counts = counts;
+
+  statsCache = { data, ts: Date.now() };
+  res.json(data);
+});
+
+// Mapa barcode -> nombre de producto desde cache L2 + L1. Best-effort: null-safe.
+async function barcodeNameMap() {
+  const map = new Map();
+  const l2 = await fireListDocs('product_cache', null);
+  for (const item of (l2?.items || [])) {
+    const p = item.data?.response?.product;
+    const n = p?.product_name || p?.name || '';
+    if (n) map.set(item.id, n);
+  }
+  for (const [bc, entry] of Object.entries(memoryCache)) {
+    const p = entry.response?.product;
+    const n = p?.product_name || p?.name || '';
+    if (n) map.set(bc, n);
+  }
+  return map;
+}
+
 app.get('/api/admin/cache-all', requireAdmin, async (req, res) => {
   // Product cache: merge L1 (memory) + L2 (Firestore)
   const l1ProductKeys = Object.keys(memoryCache);
@@ -1342,6 +1399,12 @@ app.delete('/api/admin/cache-all/:type/:key', requireAdmin, async (req, res) => 
 app.get('/api/admin/:collection', requireAdmin, validCol, async (req, res) => {
   const result = await fireListDocs(req.params.collection, req.query.pageToken || null);
   if (!result) return res.status(500).json({ error: 'Error al listar documentos' });
+  if (req.params.collection === 'scan_logs') {
+    const names = await barcodeNameMap();
+    for (const it of result.items) {
+      if (it.data?.barcode) it.data.productName = names.get(it.data.barcode) || '';
+    }
+  }
   res.json(result);
 });
 
