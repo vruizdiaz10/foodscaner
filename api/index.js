@@ -17,6 +17,7 @@ function detectOS(ua = '') {
 
 
 const app = express();
+app.set('trust proxy', 1); // Vercel sits behind exactly one proxy hop
 
 app.use(express.static(path.join(__dirname, '..')));
 app.use(express.json({ limit: '5mb' }));
