@@ -267,9 +267,23 @@ async function fireListDocs(col, pageToken) {
     if (parsed && d.fields?._hasNutritionOcr?.booleanValue === true) parsed.hasNutritionOcr = true;
     if (parsed && d.fields?._confidence?.stringValue) parsed.confidence = d.fields._confidence.stringValue;
     if (parsed && d.fields?._confidenceNotes?.stringValue) parsed.confidenceNotes = d.fields._confidenceNotes.stringValue;
+    if (parsed && d.fields?._source?.stringValue) parsed.source = d.fields._source.stringValue;
     return { id, data: parsed };
   });
   return { items, nextPageToken: data.nextPageToken || null };
+}
+
+// ponytail: full scan paginado; si scan_logs supera ~5000 docs, migrar a contadores incrementales.
+async function fireListAll(col, maxPages = 100) {
+  let all = [], pageToken = null;
+  for (let i = 0; i < maxPages; i++) {
+    const page = await fireListDocs(col, pageToken);
+    if (!page) return null;
+    all = all.concat(page.items);
+    pageToken = page.nextPageToken;
+    if (!pageToken) break;
+  }
+  return all;
 }
 
 // ponytail: id inverso = orden por nombre da "más reciente primero" sin orderBy/runQuery.
@@ -329,6 +343,16 @@ async function fireMarkScanConfidence(id, confidence, notes) {
   }).catch(() => {});
 }
 
+async function fireMarkScanSource(id, source) {
+  const token = await getAccessToken(); if (!token) return;
+  fetch(docPath('scan_logs', id) + '?updateMask.fieldPaths=_source', {
+    method: 'PATCH',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields: { _source: { stringValue: source } } }),
+    signal: AbortSignal.timeout(5000)
+  }).catch(() => {});
+}
+
 // ponytail: inline base64 image; migrar a Storage si los docs crecen > 800 KB promedio.
 async function fireLogReport(entry) {
   const token = await getAccessToken(); if (!token) return false;
@@ -354,5 +378,5 @@ module.exports = {
   fireGetCache, fireSetCache, fireRemoveCache, fireGetAiCache, fireSetAiCache,
   fireGetOcrData, fireSetOcrData,
   fireGetNutritionOcr, fireSetNutritionOcr,
-  fireListDocs, fireDeleteDoc, fireLogScan, fireMarkScanNotFound, fireMarkScanHasOcr, fireMarkScanHasNutrition, fireMarkScanConfidence, fireLogReport, ADMIN_COLLECTIONS
+  fireListDocs, fireListAll, fireDeleteDoc, fireLogScan, fireMarkScanNotFound, fireMarkScanHasOcr, fireMarkScanHasNutrition, fireMarkScanConfidence, fireMarkScanSource, fireLogReport, ADMIN_COLLECTIONS
 };
