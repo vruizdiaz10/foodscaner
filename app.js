@@ -1021,7 +1021,7 @@ function parseApiProduct(product) {
       glutenDetails = "Sin Gluten (Certificado)";
     } else if (hasGlutenFreeClaim) {
       glutenClassification = "declared";
-      glutenDetails = "Este producto no se declara libre de gluten, pero no se encontraron ingredientes que indiquen su presencia";
+      glutenDetails = "Producto declarado libre de gluten (en nombre o ingredientes)";
     } else if (hasGlutenAllergenTag) {
       hasGluten = true;
       glutenClassification = "declared";
@@ -1304,6 +1304,7 @@ function parseApiProduct(product) {
   if (labelsTags.some(t => t === 'en:halal')) { dietary.halal = true; dietary.halalSource = 'db'; dietary.halalDetail = "Certificado como halal según la etiqueta del producto."; }
   const organicTag = labelsTags.find(t => t === 'en:organic' || t === 'en:eu-organic' || t === 'en:usda-organic' || t === 'en:bio' || t === 'en:ab-agriculture-biologique' || t.includes('organic'));
   if (organicTag) { dietary.organic = true; dietary.organicSource = 'db'; dietary.organicDetail = "Certificado como orgánico según la etiqueta del producto."; }
+  if (!organicTag && /orgánic|organi[cb]/i.test(product.product_name || '')) { dietary.organic = true; dietary.organicSource = 'db'; dietary.organicDetail = "Producto declarado orgánico (en nombre del producto)."; }
   const gmoTag = labelsTags.find(t => t === 'en:non-gmo' || t === 'en:no-ogm' || t === 'en:without-gmo' || t === 'en:gmo-free' || t === 'en:non-gmo-project' || t.includes('without-gmo') || t.includes('non-gmo'));
   if (gmoTag) { dietary.nonGmo = true; dietary.nonGmoSource = 'db'; dietary.nonGmoDetail = "Certificado como libre de OGM según la etiqueta del producto."; }
   const additiveTag = labelsTags.find(t => t === 'en:no-additives' || t === 'en:additive-free' || t === 'en:without-additives' || t === 'en:no-preservatives' || t === 'en:no-artificial-additives' || t === 'en:no-artificial-colors' || t === 'en:no-artificial-flavors');
