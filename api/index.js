@@ -1290,6 +1290,23 @@ app.get('/api/admin/cache-all', requireAdmin, async (req, res) => {
   });
 });
 
+app.delete('/api/admin/cache-all/:type/:key', requireAdmin, async (req, res) => {
+  const { type, key } = req.params;
+  const layer = req.query.layer || 'all'; // l1 | l2 | all
+
+  if (type === 'product') {
+    if (layer === 'l1' || layer === 'all') delete memoryCache[key];
+    if (layer === 'l2' || layer === 'all') await fireRemoveCache(key);
+  } else if (type === 'ai') {
+    if (layer === 'l1' || layer === 'all') delete memoryAiCache[key];
+    if (layer === 'l2' || layer === 'all') await fireDeleteDoc('ai_cache', key);
+  } else {
+    return res.status(400).json({ error: 'Tipo inválido (use product|ai)' });
+  }
+
+  res.json({ status: 'deleted', type, key, layer });
+});
+
 app.get('/api/admin/:collection', requireAdmin, validCol, async (req, res) => {
   const result = await fireListDocs(req.params.collection, req.query.pageToken || null);
   if (!result) return res.status(500).json({ error: 'Error al listar documentos' });
