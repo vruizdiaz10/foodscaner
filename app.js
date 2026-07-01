@@ -874,6 +874,7 @@ function renderDietaryBadges(product) {
   let glutenState = "unknown", glutenDetail = buildGlutenDetail(g);
   if (g) {
     if (g.classification === "certified") glutenState = "db-yes";
+    else if (g.classification === "declared" && !g.hasGluten) glutenState = "db-yes";
     else if (!g.hasGluten && g.classification !== "no_info") glutenState = "ai-yes";
     else if (g.hasGluten && g.source === 'ai') glutenState = "ai-no";
     else if (g.hasGluten) glutenState = "db-no";
