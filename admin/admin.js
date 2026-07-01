@@ -13,13 +13,23 @@
   const modalTitle = document.getElementById('modal-title');
   const modalContent = document.getElementById('modal-content');
   const modalClose = document.getElementById('modal-close');
+  const sectionTitle = document.getElementById('section-title');
+  const toolbarEl = document.getElementById('toolbar');
 
   let token = sessionStorage.getItem('admin_token') || '';
-  let currentCol = 'scan_logs';
+  let currentCol = 'resumen';
   let nextPageToken = null;
   let allItems = [];
   let reportBarcodes = null;
   let lastCacheData = null;
+
+  const SECTION_TITLES = { resumen: 'Resumen', scan_logs: 'Logs de escaneo', reports: 'Reportes', products_ocr: 'OCR ingredientes', products_nutrition: 'OCR nutrición', cache: 'Cache' };
+
+  async function loadStats() {
+    docList.innerHTML = '<div class="empty-msg">Cargando…</div>';
+    statsBar.textContent = '';
+    loadMoreEl.innerHTML = '';
+  }
 
   async function loadBarcodeFlags() {
     if (reportBarcodes) return; // cached for session
@@ -74,6 +84,8 @@
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentCol = btn.dataset.col;
+    sectionTitle.textContent = SECTION_TITLES[currentCol] || currentCol;
+    toolbarEl.style.display = currentCol === 'resumen' ? 'none' : 'flex';
     filterInput.value = '';
     allItems = [];
     lastCacheData = null;
@@ -90,6 +102,7 @@
   });
 
   async function loadCollection(append = false) {
+    if (currentCol === 'resumen') { await loadStats(); return; }
     if (!append) { allItems = []; nextPageToken = null; docList.innerHTML = '<div class="empty-msg">Cargando…</div>'; loadMoreEl.innerHTML = ''; }
     if (currentCol === 'scan_logs' && !append) await loadBarcodeFlags();
 
@@ -347,5 +360,6 @@
 
   function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+  toolbarEl.style.display = 'none';
   checkLogin();
 })();
