@@ -1,4 +1,4 @@
-const CACHE_NAME = 'yomi-v1';
+const CACHE_NAME = 'yomi-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
