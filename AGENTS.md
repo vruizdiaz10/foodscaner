@@ -16,7 +16,7 @@ Food barcode scanner web app. Scans barcodes → fetches nutritional data from O
 - Vercel Project: `wadil-ai-studio-s-projects/foodscaner`
 
 ## Environment Variables
-- `GROQ_API_KEY` — Groq (Llama 3.1)
+- `GROQ_API_KEY` — Groq (GPT-OSS 120B, GPT-OSS 20B)
 - `OPENROUTER_API_KEY` — OpenRouter (GPT-4o-mini, Gemini)
 - `GEMINI_API_KEY` — Google Gemini
 - `USDA_API_KEY` — USDA FoodData Central
@@ -69,7 +69,7 @@ assets/icons/         — Favicon SVG + PNGs (generated via sharp)
 
 ### AI Providers
 Each returns `{ content, model }`:
-1. Groq (Llama 3.1-8b-instant)
+1. Groq (GPT-OSS 120B, GPT-OSS 20B)
 2. OpenRouter (GPT-4o-mini)
 3. OpenRouter (Gemini 2.0 Flash)
 4. Gemini (gemini-2.0-flash)
@@ -90,8 +90,8 @@ Each returns `{ content, model }`:
 
 ## Git
 - Branch: `master`
-- Last commit: `9a04e99` (ponytail audit: remove dead code)
-- Previous: `4dadc11` (ponytail plugin), `f1e8346` (PWA), `5bd314a` (plan), `fc69457` (scanner traffic-light)
+- Last commit: `88b22ec` (migrate Groq models to openai/gpt-oss-120b)
+- Previous: `305c15b` (Groq migration), `50c078a` (SW cache bump)
 
 ## PWA
 - favicon.svg (teal rounded square + barcode + checkmark)
