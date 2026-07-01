@@ -264,6 +264,8 @@
     docList.innerHTML = html;
   }
 
+  const SOURCE_LABELS = { cache: '💾 Cache', ia: '🤖 IA', db: '🌐 DB' };
+
   function renderLogs(items) {
     if (!items.length) { docList.innerHTML = '<div class="empty-msg">Sin logs todavía.</div>'; return; }
     const rows = items.map(item => {
@@ -277,26 +279,36 @@
         d.hasNutritionOcr ? '<span class="log-badge log-badge-blue">📊 Nutrición</span>' : '',
         reportBarcodes?.has(bc) ? '<span class="log-badge log-badge-orange">🚩 Reporte</span>' : ''
       ].filter(Boolean).join(' ');
+      const pname = d.productName ? `<div class="log-pname">${escHtml(d.productName)}</div>` : '';
       const barcodeCell = bc
-        ? `<a href="https://www.yomi.mx/scan.html?barcode=${encodeURIComponent(bc)}" target="_blank" rel="noopener" class="barcode-link">${escHtml(bc)}</a> ${badges}`
+        ? `<a href="https://www.yomi.mx/scan.html?barcode=${encodeURIComponent(bc)}" target="_blank" rel="noopener" class="barcode-link">${escHtml(bc)}</a> ${badges}${pname}`
         : '—';
       const confMap = { alta: '🟢 Alta', media: '🟡 Media', baja: '🔴 Baja' };
       const confLabel = d.confidence ? (confMap[d.confidence.toLowerCase()] || escHtml(d.confidence)) : null;
       const confCell = confLabel
         ? `<span class="conf-wrap">${confLabel}<span class="conf-tooltip"><span class="conf-tooltip-level">Confianza del análisis: ${confLabel}</span>${d.confidenceNotes ? `<span class="conf-tooltip-notes">${escHtml(d.confidenceNotes)}</span>` : ''}</span></span>`
         : '—';
-      return `<tr>
+      const srcCell = SOURCE_LABELS[d.source] || (d.source ? escHtml(d.source) : '—');
+      const detailRows = [
+        `<span><b>ID:</b> ${escHtml(item.id)}</span>`,
+        `<span><b>IP:</b> ${escHtml(d.ip || '—')}</span>`,
+        `<span><b>User-Agent:</b> ${escHtml(d.ua || '—')}</span>`,
+        `<span><b>Fuente:</b> ${srcCell}</span>`,
+        d.confidenceNotes ? `<span><b>Notas de confianza:</b> ${escHtml(d.confidenceNotes)}</span>` : ''
+      ].filter(Boolean).join('');
+      return `<tr class="log-row">
         <td class="mono">${escHtml(fecha)}</td>
         <td class="mono">${barcodeCell}</td>
-        <td class="mono">${escHtml(d.ip || '—')}</td>
         <td>${escHtml(loc)}</td>
         <td>${escHtml(d.os || '—')}</td>
         <td>${confCell}</td>
+        <td>${srcCell}</td>
         <td><button class="del-log btn-del" data-action="del" data-id="${escHtml(item.id)}">✕</button></td>
-      </tr>`;
+      </tr>
+      <tr class="log-detail" hidden><td colspan="7"><div class="log-detail-grid">${detailRows}</div></td></tr>`;
     }).join('');
     docList.innerHTML = `<table class="log-table">
-      <thead><tr><th>Fecha/Hora</th><th>Código</th><th>IP</th><th>Ubicación</th><th>Sistema</th><th>Confianza</th><th></th></tr></thead>
+      <thead><tr><th>Fecha/Hora</th><th>Código</th><th>Ubicación</th><th>Sistema</th><th>Confianza</th><th>Fuente</th><th></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
   }
@@ -344,7 +356,14 @@
 
   docList.addEventListener('click', async e => {
     const btn = e.target.closest('[data-action]');
-    if (!btn) return;
+    if (!btn) {
+      const row = e.target.closest('tr.log-row');
+      if (row && !e.target.closest('a')) {
+        const det = row.nextElementSibling;
+        if (det && det.classList.contains('log-detail')) det.hidden = !det.hidden;
+      }
+      return;
+    }
     const id = btn.dataset.id;
 
     if (btn.dataset.action === 'view') {
