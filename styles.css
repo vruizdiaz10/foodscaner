@@ -64,6 +64,7 @@
   --accent-primary:      #16a34a;
   --accent-primary-glow: rgba(22,163,74,0.2);
   --accent-alert:        #eab308;
+  --accent-alert-glow:   rgba(234,179,8,0.2);
   --accent-error:        #dc2626;
   --accent-error-glow:   rgba(220,38,38,0.2);
 }
