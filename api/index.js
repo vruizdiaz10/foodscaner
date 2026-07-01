@@ -179,7 +179,7 @@ async function callGroq(prompt, model = 'openai/gpt-oss-120b', max_tokens = 3000
   return { content: data.choices?.[0]?.message?.content || "", model: "Groq: " + model };
 }
 
-async function callGroqVision(imageBase64, prompt, model = 'openai/gpt-oss-120b', max_tokens = 500) {
+async function callGroqVision(imageBase64, prompt, model = 'meta-llama/llama-4-scout-17b-16e-instruct', max_tokens = 500) {
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
